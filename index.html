@@ -1,0 +1,2381 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Wordly Wise Galaxy</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.2/babel.min.js"></script>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { background: #04050f; }
+    #root { min-height: 100vh; }
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+  <script type="text/babel">
+    const { useState, useEffect, useMemo, useRef } = React;
+
+/* ─────────────────────────────────────────────
+   BOOKS & CONSTANTS
+───────────────────────────────────────────── */
+const BOOKS = [
+  { id:2,  name:"Nebula",     icon:"🌸", color:"#FF8FAB", rgb:"255,143,171", grade:"Grade 2" },
+  { id:3,  name:"Aurora",     icon:"🌿", color:"#50FA7B", rgb:"80,250,123",  grade:"Grade 3" },
+  { id:4,  name:"Comet",      icon:"🔥", color:"#FF7070", rgb:"255,112,112", grade:"Grade 4" },
+  { id:5,  name:"Pulsar",     icon:"💠", color:"#4FC3F7", rgb:"79,195,247",  grade:"Grade 5" },
+  { id:6,  name:"Quasar",     icon:"🔮", color:"#BD93F9", rgb:"189,147,249", grade:"Grade 6" },
+  { id:7,  name:"Andromeda",  icon:"🌌", color:"#00E5FF", rgb:"0,229,255",   grade:"Grade 7" },
+  { id:8,  name:"Cassiopeia", icon:"🌠", color:"#FFB347", rgb:"255,179,71",  grade:"Grade 8" },
+  { id:9,  name:"Orion",      icon:"🏹", color:"#FF4D6D", rgb:"255,77,109",  grade:"Grade 9" },
+  { id:10, name:"Vega",       icon:"💎", color:"#00FA9A", rgb:"0,250,154",   grade:"Grade 10" },
+  { id:11, name:"Rigel",      icon:"🌊", color:"#87CEEB", rgb:"135,206,235", grade:"Grade 11" },
+  { id:12, name:"Apex",       icon:"🚀", color:"#FF6600", rgb:"255,102,0",   grade:"Grade 12" },
+];
+
+// Books 2-3: 15 lessons/10 words. Books 4-12: 20 lessons/15 words.
+const LESSON_COUNT = id => id <= 3 ? 15 : 20;
+const WORD_COUNT   = id => id <= 3 ? 10 : 15;
+
+const STARS_DATA = Array.from({ length: 90 }, (_, i) => ({
+  id: i, size: Math.random()*2.5+0.5,
+  left: Math.random()*100, top: Math.random()*100,
+  dur: Math.random()*4+2, delay: Math.random()*5,
+}));
+
+/* ─────────────────────────────────────────────
+   STICKERS
+───────────────────────────────────────────── */
+const RARITIES = {
+  common:    { label:"Common",    color:"#aaaaaa", glow:"rgba(180,180,180,0.3)",  bg:"rgba(200,200,200,0.07)" },
+  rare:      { label:"Rare",      color:"#4FC3F7", glow:"rgba(79,195,247,0.4)",   bg:"rgba(79,195,247,0.08)"  },
+  epic:      { label:"Epic",      color:"#BD93F9", glow:"rgba(189,147,249,0.45)", bg:"rgba(189,147,249,0.09)" },
+  legendary: { label:"Legendary", color:"#FFD700", glow:"rgba(255,215,0,0.5)",    bg:"rgba(255,215,0,0.09)"   },
+};
+const STICKERS = [
+  // ── COMMON · 25 (25–40 XP) ──────────────────────────────────────────────
+  { id:"s01", emoji:"⭐", name:"Baby Star",           cost:25, rarity:"common" },
+  { id:"s02", emoji:"🌙", name:"Crescent Moon",       cost:25, rarity:"common" },
+  { id:"s03", emoji:"☁️",  name:"Cloud Drift",         cost:25, rarity:"common" },
+  { id:"s04", emoji:"🌱", name:"Seedling",             cost:25, rarity:"common" },
+  { id:"s05", emoji:"🌿", name:"Wild Herb",            cost:25, rarity:"common" },
+  { id:"s06", emoji:"🍃", name:"Falling Leaf",         cost:30, rarity:"common" },
+  { id:"s07", emoji:"💧", name:"Water Drop",           cost:30, rarity:"common" },
+  { id:"s08", emoji:"❄️",  name:"Snowflake",            cost:30, rarity:"common" },
+  { id:"s09", emoji:"🌊", name:"Ocean Wave",           cost:30, rarity:"common" },
+  { id:"s10", emoji:"🌸", name:"Cherry Blossom",       cost:30, rarity:"common" },
+  { id:"s11", emoji:"🌻", name:"Sunflower",            cost:30, rarity:"common" },
+  { id:"s12", emoji:"🍄", name:"Forest Mushroom",      cost:35, rarity:"common" },
+  { id:"s13", emoji:"🌺", name:"Tropical Bloom",       cost:35, rarity:"common" },
+  { id:"s14", emoji:"🌈", name:"After-Rain Rainbow",   cost:35, rarity:"common" },
+  { id:"s15", emoji:"🍀", name:"Lucky Clover",         cost:35, rarity:"common" },
+  { id:"s16", emoji:"🦋", name:"Meadow Butterfly",     cost:35, rarity:"common" },
+  { id:"s17", emoji:"🐚", name:"Sea Shell",            cost:35, rarity:"common" },
+  { id:"s18", emoji:"🌾", name:"Golden Wheat",         cost:35, rarity:"common" },
+  { id:"s19", emoji:"🌴", name:"Palm Tree",            cost:40, rarity:"common" },
+  { id:"s20", emoji:"🌟", name:"Twinkling Star",       cost:40, rarity:"common" },
+  { id:"s21", emoji:"☀️",  name:"Morning Sun",          cost:40, rarity:"common" },
+  { id:"s22", emoji:"🌲", name:"Pine Tree",            cost:40, rarity:"common" },
+  { id:"s23", emoji:"🐝", name:"Honey Bee",            cost:40, rarity:"common" },
+  { id:"s24", emoji:"🌓", name:"Quarter Moon",         cost:40, rarity:"common" },
+  { id:"s25", emoji:"🪨", name:"Moon Rock",            cost:40, rarity:"common" },
+
+  // ── RARE · 20 (75–120 XP) ───────────────────────────────────────────────
+  { id:"s26", emoji:"🚀", name:"Rocket Ship",          cost:75,  rarity:"rare" },
+  { id:"s27", emoji:"🪐", name:"Ringed Planet",        cost:80,  rarity:"rare" },
+  { id:"s28", emoji:"☄️",  name:"Comet Trail",          cost:80,  rarity:"rare" },
+  { id:"s29", emoji:"🔭", name:"Telescope",            cost:85,  rarity:"rare" },
+  { id:"s30", emoji:"🧬", name:"DNA Helix",            cost:85,  rarity:"rare" },
+  { id:"s31", emoji:"⚗️",  name:"Alchemy Flask",        cost:90,  rarity:"rare" },
+  { id:"s32", emoji:"🧪", name:"Test Tube",            cost:90,  rarity:"rare" },
+  { id:"s33", emoji:"🧲", name:"Magnet Force",         cost:90,  rarity:"rare" },
+  { id:"s34", emoji:"🌋", name:"Volcano",              cost:95,  rarity:"rare" },
+  { id:"s35", emoji:"🦈", name:"Deep Sea Shark",       cost:95,  rarity:"rare" },
+  { id:"s36", emoji:"🐬", name:"Dolphin Wave",         cost:95,  rarity:"rare" },
+  { id:"s37", emoji:"🦅", name:"Soaring Eagle",        cost:100, rarity:"rare" },
+  { id:"s38", emoji:"🐙", name:"Deep Sea Octopus",     cost:100, rarity:"rare" },
+  { id:"s39", emoji:"🦉", name:"Night Owl",            cost:105, rarity:"rare" },
+  { id:"s40", emoji:"🐺", name:"Wolf Howl",            cost:105, rarity:"rare" },
+  { id:"s41", emoji:"🛰️",  name:"Satellite",            cost:110, rarity:"rare" },
+  { id:"s42", emoji:"🌍", name:"Planet Earth",         cost:110, rarity:"rare" },
+  { id:"s43", emoji:"🦁", name:"Savanna Lion",         cost:115, rarity:"rare" },
+  { id:"s44", emoji:"🌑", name:"New Moon",             cost:115, rarity:"rare" },
+  { id:"s45", emoji:"🦜", name:"Tropical Parrot",      cost:120, rarity:"rare" },
+
+  // ── EPIC · 18 (175–275 XP) ──────────────────────────────────────────────
+  { id:"s46", emoji:"🌠", name:"Meteor Shower",        cost:175, rarity:"epic" },
+  { id:"s47", emoji:"💫", name:"Starburst",            cost:185, rarity:"epic" },
+  { id:"s48", emoji:"🌀", name:"Galaxy Spiral",        cost:190, rarity:"epic" },
+  { id:"s49", emoji:"⚡", name:"Plasma Storm",         cost:195, rarity:"epic" },
+  { id:"s50", emoji:"💎", name:"Space Crystal",        cost:200, rarity:"epic" },
+  { id:"s51", emoji:"⚛️",  name:"Atom Core",            cost:210, rarity:"epic" },
+  { id:"s52", emoji:"🐉", name:"Storm Dragon",         cost:215, rarity:"epic" },
+  { id:"s53", emoji:"🧊", name:"Cryo Crystal",         cost:220, rarity:"epic" },
+  { id:"s54", emoji:"🔬", name:"Microscope",           cost:225, rarity:"epic" },
+  { id:"s55", emoji:"🧫", name:"Evolved Cell",         cost:230, rarity:"epic" },
+  { id:"s56", emoji:"🌡️",  name:"Thermal Vent",         cost:235, rarity:"epic" },
+  { id:"s57", emoji:"🦊", name:"Cosmic Fox",           cost:240, rarity:"epic" },
+  { id:"s58", emoji:"🐋", name:"Blue Whale",           cost:245, rarity:"epic" },
+  { id:"s59", emoji:"🏔️",  name:"Summit Peak",          cost:250, rarity:"epic" },
+  { id:"s60", emoji:"💡", name:"Eureka Moment",        cost:255, rarity:"epic" },
+  { id:"s61", emoji:"🌃", name:"Night Cosmos",         cost:260, rarity:"epic" },
+  { id:"s62", emoji:"🪸", name:"Deep Reef",            cost:265, rarity:"epic" },
+  { id:"s63", emoji:"🦠", name:"Cosmic Microbe",       cost:275, rarity:"epic" },
+
+  // ── LEGENDARY · 15 (350–600 XP) ─────────────────────────────────────────
+  { id:"s64", emoji:"🕳️",  name:"Event Horizon",        cost:350, rarity:"legendary" },
+  { id:"s65", emoji:"💥", name:"Big Bang Echo",         cost:375, rarity:"legendary" },
+  { id:"s66", emoji:"🛸", name:"Ancient Starship",      cost:395, rarity:"legendary" },
+  { id:"s67", emoji:"🌌", name:"Galactic Core",         cost:415, rarity:"legendary" },
+  { id:"s68", emoji:"🔮", name:"Oracle Sphere",         cost:430, rarity:"legendary" },
+  { id:"s69", emoji:"👑", name:"Nebula Crown",          cost:445, rarity:"legendary" },
+  { id:"s70", emoji:"🎆", name:"Supernova Bloom",       cost:460, rarity:"legendary" },
+  { id:"s71", emoji:"♾️",  name:"Infinite Universe",     cost:475, rarity:"legendary" },
+  { id:"s72", emoji:"🌪️",  name:"Dark Energy Vortex",   cost:490, rarity:"legendary" },
+  { id:"s73", emoji:"🏆", name:"Galactic Champion",     cost:505, rarity:"legendary" },
+  { id:"s74", emoji:"💠", name:"Quantum Diamond",       cost:520, rarity:"legendary" },
+  { id:"s75", emoji:"🔱", name:"Cosmic Trident",        cost:540, rarity:"legendary" },
+  { id:"s76", emoji:"✨", name:"Cosmic Dust Cloud",     cost:555, rarity:"legendary" },
+  { id:"s77", emoji:"🌅", name:"Cosmic Dawn",           cost:575, rarity:"legendary" },
+  { id:"s78", emoji:"🎇", name:"Neutron Star Burst",    cost:600, rarity:"legendary" },
+];
+const PAGE_THEMES = [
+  { bg:"linear-gradient(135deg,#1a0533 0%,#0d1b4b 100%)", label:"🌌 Cosmos"  },
+  { bg:"linear-gradient(135deg,#0a2a1a 0%,#042b2b 100%)", label:"🌿 Forest"  },
+  { bg:"linear-gradient(135deg,#2a0a1a 0%,#1a0010 100%)", label:"🌸 Blossom" },
+  { bg:"linear-gradient(135deg,#1a1a00 0%,#2a1500 100%)", label:"🔥 Ember"   },
+  { bg:"linear-gradient(135deg,#001a2a 0%,#001530 100%)", label:"🌊 Ocean"   },
+  { bg:"linear-gradient(135deg,#1a001a 0%,#2a0a2a 100%)", label:"🔮 Magic"   },
+];
+
+/* ─────────────────────────────────────────────
+   EXACT WORDS — read directly from your book photos.
+   Numbers in the original list = lesson number.
+   Words are hardcoded; AI only writes definitions.
+───────────────────────────────────────────── */
+const WW_WORDS = {
+  // ══ BOOK 2 — 15 lessons × 10 words — READ FROM PHOTO ════════════════════
+  "2-1":  ["calf","claw","couple","cushion","flap","groom","share","shelter","yard","zero"],
+  "2-2":  ["accident","acrobat","alarm","bounce","enormous","gap","scoop","support","tangle","weigh"],
+  "2-3":  ["antenna","balance","boulder","cliff","joint","machine","motor","muscle","planet","slope"],
+  "2-4":  ["ape","brain","branch","cavern","chimney","dozen","flame","net","spear","torch"],
+  "2-5":  ["absorb","anchor","brush","bud","center","core","factory","hive","sapling","trunk"],
+  "2-6":  ["cone","cube","earth","fern","fuel","grain","lizard","miner","present","seam"],
+  "2-7":  ["badge","banner","corner","design","display","fold","parade","rectangle","salute","tread"],
+  "2-8":  ["aquarium","cage","club","faucet","flood","gift","icicle","imitate","pearl","valley"],
+  "2-9":  ["aboard","blast","career","cautious","girder","invent","rotate","story","strand","tower"],
+  "2-10": ["astronomy","besides","crater","degree","diameter","gaze","gravity","reflect","telescope","universe"],
+  "2-11": ["atlas","aware","boor","equator","fang","fierce","hoof","journey","local","rare"],
+  "2-12": ["arch","attention","award","collapse","demolish","excess","outline","sculpture","spade","utensil"],
+  "2-13": ["bustle","channel","connect","empire","mention","peak","scholar","settle","vehicle","zigzag"],
+  "2-14": ["adult","clump","curious","gratitude","herd","newcomer","plain","stalk","tusk","wealthy"],
+  "2-15": ["base","din","discard","dome","gallon","instrument","luxury","mallet","skill","slight"],
+
+  // ══ BOOK 3 — 15 lessons × 10 words — READ FROM PHOTO ════════════════════
+  "3-1":  ["cylinder","examine","fatal","feature","grasp","jet","marine","scar","tentacle","vessel"],
+  "3-2":  ["attract","crew","dangle","drift","event","launch","opposite","reverse","signal","steer"],
+  "3-3":  ["ambition","auction","coast","current","frail","intelligent","novel","resident","starve","volunteer"],
+  "3-4":  ["average","border","cocoon","flutter","moisture","nectar","process","span","suitable","timber"],
+  "3-5":  ["amaze","arctic","court","elect","interval","league","limit","milestone","recreation","tackle"],
+  "3-6":  ["chasm","continent","credit","enable","foul","gust","ordeal","plateau","rig","schedule"],
+  "3-7":  ["act","additional","advice","crumple","fan","memorize","mystify","pause","transparent","vanish"],
+  "3-8":  ["contain","digest","finicky","habit","hinge","marsh","nursery","rely","spine","thrive"],
+  "3-9":  ["attitude","confess","defend","gradual","hint","individual","malice","misery","solution","survey"],
+  "3-10": ["cable","cathedral","convey","device","freight","landmark","method","rod","shaft","structure"],
+  "3-11": ["diagram","frustrate","graduate","prank","primary","risk","stress","urge","vacant","vigorous"],
+  "3-12": ["adopt","arouse","arrange","cell","infection","influence","injure","pattern","series","vision"],
+  "3-13": ["calendar","carnival","experience","govern","gulf","haste","nation","scatter","surrender","thrill"],
+  "3-14": ["bold","cunning","deed","doze","jagged","positive","respect","responsible","smuggle","version"],
+  "3-15": ["division","mental","outcome","pastime","promote","rate","regret","talent","theory","tournament"],
+
+  // ══ BOOK 4 — 20 lessons × 15 words — READ FROM PHOTO ════════════════════
+  "4-1":  ["benefit","complete","develop","dismay","ease","hail","humor","lack","master","patriot","recommend","remark","represent","sufficient","utter"],
+
+  // ══ BOOK 6 — 20 lessons × 15 words — READ FROM PHOTO ════════════════════
+  // Lessons 1 & 3 have 14 confirmed words; the 15th was unclear in the photo.
+  "6-1":  ["affection","appeal","clasp","contribute","declare","eloquent","exhibit","ferry","immigrant","lofty","pedestal","persecute","poverty","unveil"],
+  "6-2":  ["arrogant","boycott","campaign","ceremony","custody","degrade","detain","extend","integrate","segregate","supreme","triumph","vacate","verdict","violate"],
+  "6-3":  ["abundant","arid","distinct","graze","hectic","humid","incredible","inhabit","peninsula","rural","sanctuary","splendor","squalor","terrain"],
+  "6-4":  ["aloft","attain","buffet","elude","flammable","hover","inflate","jeopardy","moor","plummet","pollute","propel","stationary","superb","swivel"],
+  "6-5":  ["antic","attire","captivate","deft","diligent","eclipse","evolve","innate","inscribe","posture","shroud","stifle","tentative","tranquil","versatile"],
+  "6-6":  ["apparel","appreciate","continuous","dissolve","domesticate","emerge","fiber","function","hatch","inhibit","minute","motion","sheathe","shed","transfer"],
+  "6-7":  ["brawl","casual","constant","excel","exhaust","hardy","mediocre","monotonous","originate","punctuate","ravenous","realistic","soothe","stampede","veteran"],
+  "6-8":  ["accompany","beneficial","captive","convenient","ecstasy","expedition","expanse","inept","interpret","invaluable","linger","retrieve","skirmish","supplement","territory"],
+  "6-9":  ["accumulate","aggravate","conserve","conspicuous","contaminate","diminish","drastic","extravagant","frugal","impurity","peril","perpetual","resource","substitute","sustain"],
+  "6-10": ["anticipate","bankrupt","brief","brisk","budget","compete","complicate","effect","err","factor","fad","gripe","knack","leisure","unique"],
+  "6-11": ["abbreviate","apprehensive","appropriate","exclude","fanciful","futile","grudge","inspire","majority","persevere","possess","prejudice","resolute","sneer","unanimous"],
+  "6-12": ["abandon","adversary","baffle","blunder","colossal","detect","haul","overpower","rejoice","scoff","sentinel","siege","sinister","victor","woe"],
+  "6-13": ["adapt","deplete","efficient","fatigue","gait","glare","habitat","oblivious","outmoded","prominent","quench","rigor","sear","transport","wend"],
+  "6-14": ["benevolent","consent","discreet","engross","esteem","exaggerate","extensive","fantastic","intrigue","marvel","mission","opportunity","relinquish","tyrant","vanquish"],
+  "6-15": ["analyze","apprehensive","compose","coincide","disk","envelop","exist","extraordinary","fuse","mere","revolve","scale","solar","trace","velocity"],
+  "6-16": ["awe","catastrophe","collide","consequence","deceive","fatality","improvise","loom","lull","placid","predicament","priority","reinforce","stern","treacherous"],
+  "6-17": ["corrode","debris","elated","exploit","leeway","miniature","mobile","onset","ooze","pathetic","preliminary","quest","restrain","salvage","scour"],
+  "6-18": ["abroad","anguish","commence","commend","controversy","cordial","dissent","earnest","elicit","exhilaration","genuine","hoax","manipulate","recount","skeptic"],
+  "6-19": ["breach","clammy","construct","elaborate","fragrant","furnish","haven","install","massive","repel","restore","retaliate","stench","strew","vicinity"],
+  "6-20": ["bluster","council","dwell","exterminate","fee","garment","infest","insist","paltry","peculiar","rash","revenge","rodent","swarm","vat"],
+};
+
+/* ─── Definitions cache (so AI is only called ONCE per lesson) ─── */
+const DEFS_KEY = "wwgalaxy_defs";
+const loadDefsCache = ()=>{
+  try{
+    const raw = JSON.parse(localStorage.getItem(DEFS_KEY)||"{}");
+    // Strip any null/invalid words that may have been cached previously
+    Object.keys(raw).forEach(k => {
+      if(Array.isArray(raw[k])) raw[k] = raw[k].filter(w => w && typeof w.word === 'string' && w.word.trim() && w.definition);
+    });
+    return raw;
+  }catch{ return {}; }
+};
+const saveDefsCache = c=>{ try{ localStorage.setItem(DEFS_KEY, JSON.stringify(c)); }catch{} };
+
+/* Ask AI to write definitions for a SPECIFIC list of words */
+async function getDefinitionsFromAI(bookId, lessonNum, wordNames) {
+  const prompt = `Write definitions for these ${wordNames.length} vocabulary words from Wordly Wise 3000 Book ${bookId} Lesson ${lessonNum}.
+Return ONLY a raw JSON array (no text before or after, no markdown):
+[{"word":"...","pos":"noun/verb/adjective/adverb/etc","definition":"clear kid-friendly 1-2 sentence definition","example":"one natural sentence"}]
+Define these exact words in this order: ${wordNames.join(", ")}`;
+
+  const res = await fetch("https://api.anthropic.com/v1/messages", {
+    method:"POST", headers:{"Content-Type":"application/json"},
+    body: JSON.stringify({ model:"claude-sonnet-4-6", max_tokens:2000,
+      messages:[{ role:"user", content:prompt }] }),
+  });
+  if (!res.ok) throw new Error(`API ${res.status}`);
+  const data = await res.json();
+  if (data.error) throw new Error(data.error.message);
+  const raw = data.content?.find(b=>b.type==="text")?.text || "";
+  const match = raw.match(/\[[\s\S]*\]/);
+  if (!match) throw new Error("No JSON array in response");
+  const parsed = JSON.parse(match[0].replace(/^\[\s*"/,'[{"'));
+  return parsed.filter(w => w && typeof w.word === 'string' && w.word.trim() && w.definition);
+}
+
+
+async function fetchWordsFromAI(bookId, lessonNum) {
+  const wordCount = WORD_COUNT(bookId);
+  const prompt = `Return ONLY a raw JSON array — no text before or after it, no markdown, no backticks.
+Wordly Wise 3000 Book ${bookId} Lesson ${lessonNum}: list ${wordCount} vocabulary words.
+Format: [{"word":"...","pos":"noun/verb/adjective/adverb","definition":"clear kid-friendly definition","example":"one example sentence"}]`;
+
+  const res = await fetch("https://api.anthropic.com/v1/messages", {
+    method:"POST", headers:{"Content-Type":"application/json"},
+    body: JSON.stringify({ model:"claude-sonnet-4-6", max_tokens:1500,
+      messages:[{ role:"user", content:prompt }] }),
+  });
+  if (!res.ok) throw new Error(`API ${res.status}`);
+  const data = await res.json();
+  if (data.error) throw new Error(data.error.message);
+  const raw = data.content?.find(b=>b.type==="text")?.text || "";
+  const match = raw.match(/\[[\s\S]*\]/);
+  if (!match) throw new Error("No JSON array in response");
+  let jsonStr = match[0].replace(/^\[\s*"/, '[{"');
+  const parsed = JSON.parse(jsonStr);
+  return parsed.filter(w => w && typeof w.word === 'string' && w.word.trim() && w.definition);
+}
+
+/* ─────────────────────────────────────────────
+   HELPERS
+───────────────────────────────────────────── */
+const calcStars = p => p>=0.8?3:p>=0.6?2:1;
+function calcXP(mode,p){
+  const t={flashcard:[100,70,40],quiz:[150,100,55],match:[120,120,120],spell:[200,135,65]};
+  const[hi,mid,lo]=t[mode]; return p>=0.8?hi:p>=0.6?mid:lo;
+}
+function shuffle(arr){
+  const a=[...arr];
+  for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];}
+  return a;
+}
+let _n=0; const newUid=()=>`p${++_n}`;
+const blankWord = ()=>({ word:"", pos:"", definition:"", example:"" });
+
+/* ─────────────────────────────────────────────
+   PERSISTENCE
+───────────────────────────────────────────── */
+const SAVE_KEY  = "wwgalaxy_save";
+const WORDS_KEY = "wwgalaxy_words";
+
+function loadSave()  { try{ return JSON.parse(localStorage.getItem(SAVE_KEY)||"null"); }catch{return null;} }
+function loadCustomWords() { try{ return JSON.parse(localStorage.getItem(WORDS_KEY)||"{}"); }catch{return {};} }
+function saveCustomWords(w){ try{ localStorage.setItem(WORDS_KEY, JSON.stringify(w)); }catch{} }
+
+/* ─────────────────────────────────────────────
+   CSS
+───────────────────────────────────────────── */
+const css = `
+@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;600;700;900&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,600&display=swap');
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#04050f;--surface:rgba(255,255,255,0.04);--border:rgba(255,255,255,0.08);
+  --text:#e8eaf6;--muted:rgba(232,234,246,0.45);--radius:16px;
+  --font-head:'Orbitron',sans-serif;--font-body:'DM Sans',sans-serif;
+}
+html,body,#root{height:100%;background:var(--bg);color:var(--text);font-family:var(--font-body)}
+@keyframes twinkle{0%,100%{opacity:.15;transform:scale(1)}50%{opacity:1;transform:scale(1.5)}}
+@keyframes float{0%,100%{transform:translateY(0)}50%{transform:translateY(-10px)}}
+@keyframes fadeUp{from{opacity:0;transform:translateY(22px)}to{opacity:1;transform:translateY(0)}}
+@keyframes spin{to{transform:rotate(360deg)}}
+@keyframes wrongShake{0%,100%{transform:translateX(0)}25%,75%{transform:translateX(-8px)}50%{transform:translateX(8px)}}
+@keyframes legendaryPulse{0%,100%{box-shadow:0 0 14px rgba(255,215,0,.4)}50%{box-shadow:0 0 32px rgba(255,215,0,.9),0 0 60px rgba(255,140,0,.3)}}
+.app{min-height:100vh;position:relative;overflow-x:hidden}
+.star-field{position:fixed;inset:0;pointer-events:none;z-index:0}
+.star{position:absolute;border-radius:50%;background:#fff;animation:twinkle var(--dur) ease-in-out var(--delay) infinite}
+.screen{position:relative;z-index:1;min-height:100vh;display:flex;flex-direction:column;align-items:center;padding:24px 16px 48px;animation:fadeUp .35s ease both}
+.topbar{width:100%;max-width:760px;display:flex;align-items:center;gap:12px;margin-bottom:28px}
+.btn-back{background:var(--surface);border:1px solid var(--border);color:var(--text);border-radius:12px;padding:8px 16px;cursor:pointer;font-family:var(--font-body);font-size:14px;transition:all .2s}
+.btn-back:hover{background:rgba(255,255,255,.09)}
+.xp-badge{margin-left:auto;background:linear-gradient(135deg,#FFD700,#FF8C00);color:#1a0a00;font-weight:700;font-size:13px;border-radius:20px;padding:6px 14px;font-family:var(--font-head)}
+.home-title{font-family:var(--font-head);font-size:clamp(28px,6vw,50px);font-weight:900;background:linear-gradient(135deg,#FFD700,#FF69B4,#00E5FF);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;text-align:center;line-height:1.1;margin-bottom:8px}
+.home-sub{color:var(--muted);font-size:15px;text-align:center;margin-bottom:22px}
+.stats-row{display:flex;gap:12px;margin-bottom:20px;flex-wrap:wrap;justify-content:center}
+.stat-pill{background:var(--surface);border:1px solid var(--border);border-radius:20px;padding:8px 20px;font-size:14px;font-weight:600}
+.nav-btns{display:flex;gap:12px;margin-bottom:28px;flex-wrap:wrap;justify-content:center}
+.nav-btn{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:12px 22px;cursor:pointer;font-family:var(--font-body);font-size:14px;font-weight:600;color:var(--text);transition:all .2s;display:flex;align-items:center;gap:8px}
+.nav-btn:hover{background:rgba(255,255,255,.09);transform:translateY(-2px)}
+.books-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(155px,1fr));gap:14px;width:100%;max-width:760px}
+.book-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:20px 16px 16px;cursor:pointer;transition:transform .25s,box-shadow .25s,border-color .25s;text-align:center;position:relative;overflow:hidden}
+.book-card::before{content:'';position:absolute;inset:0;background:radial-gradient(circle at 50% 0%,rgba(var(--acc-rgb),.12),transparent 70%);pointer-events:none}
+.book-card:hover{transform:translateY(-6px);border-color:rgba(var(--acc-rgb),.5);box-shadow:0 12px 40px rgba(var(--acc-rgb),.18)}
+.book-icon{font-size:36px;margin-bottom:8px;display:block;animation:float 3s ease-in-out infinite}
+.book-name{font-family:var(--font-head);font-size:12px;font-weight:700;color:var(--acc);margin-bottom:2px}
+.book-grade{font-size:11px;color:var(--muted);margin-bottom:10px}
+.prog-bar{height:4px;background:rgba(255,255,255,.1);border-radius:4px;overflow:hidden}
+.prog-fill{height:100%;background:var(--acc);border-radius:4px;transition:width .5s}
+.prog-label{font-size:10px;color:var(--muted);margin-top:4px}
+.section-title{font-family:var(--font-head);font-size:clamp(18px,4vw,28px);font-weight:700;margin-bottom:24px;text-align:center}
+.lessons-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:10px;width:100%;max-width:580px}
+.lesson-cell{aspect-ratio:1;background:var(--surface);border:1px solid var(--border);border-radius:12px;display:flex;flex-direction:column;align-items:center;justify-content:center;cursor:pointer;font-weight:700;font-size:16px;transition:all .2s;gap:2px}
+.lesson-cell:hover{border-color:rgba(var(--acc-rgb),.6);transform:scale(1.06)}
+.lesson-cell.done{background:rgba(var(--acc-rgb),.1);border-color:rgba(var(--acc-rgb),.3)}
+.lesson-cell.has-custom{box-shadow:inset 0 0 0 2px rgba(80,250,123,.3)}
+.lesson-stars{font-size:10px;letter-spacing:-1px}
+.lesson-header{font-family:var(--font-head);font-size:clamp(16px,3.5vw,24px);font-weight:700;text-align:center;margin-bottom:6px}
+.lesson-sub{font-size:13px;color:var(--muted);text-align:center;margin-bottom:28px}
+.modes-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;width:100%;max-width:500px;margin-bottom:20px}
+.mode-btn{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:20px 16px;cursor:pointer;text-align:center;transition:all .25s;position:relative;overflow:hidden}
+.mode-btn::before{content:'';position:absolute;inset:0;background:radial-gradient(circle at 50% 0%,rgba(var(--acc-rgb),.1),transparent 70%)}
+.mode-btn:hover{border-color:rgba(var(--acc-rgb),.5);transform:translateY(-3px);box-shadow:0 8px 24px rgba(var(--acc-rgb),.15)}
+.mode-icon{font-size:28px;margin-bottom:8px;display:block}
+.mode-name{font-family:var(--font-head);font-size:11px;font-weight:700;color:var(--acc);margin-bottom:3px}
+.mode-desc{font-size:11px;color:var(--muted)}
+.word-status-bar{display:flex;align-items:center;gap:10px;width:100%;max-width:500px;margin-bottom:12px}
+.custom-badge{background:rgba(80,250,123,.12);border:1px solid rgba(80,250,123,.35);color:#50fa7b;font-size:11px;font-weight:700;border-radius:20px;padding:4px 12px}
+.ai-badge{background:rgba(79,195,247,.1);border:1px solid rgba(79,195,247,.3);color:#4FC3F7;font-size:11px;font-weight:700;border-radius:20px;padding:4px 12px}
+.edit-words-btn{margin-left:auto;background:rgba(255,215,0,.1);border:1px solid rgba(255,215,0,.3);color:#FFD700;font-size:12px;font-weight:700;border-radius:10px;padding:5px 14px;cursor:pointer;font-family:var(--font-body);transition:all .2s}
+.edit-words-btn:hover{background:rgba(255,215,0,.2)}
+.word-list{width:100%;max-width:500px;display:flex;flex-direction:column;gap:8px}
+.word-row{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:12px 16px;display:flex;gap:12px;align-items:flex-start}
+.word-row-word{font-weight:700;color:var(--acc);font-size:15px;min-width:110px}
+.word-row-pos{font-size:10px;color:var(--muted);font-style:italic;margin-bottom:2px}
+.word-row-def{font-size:13px}
+.loading-box{display:flex;flex-direction:column;align-items:center;gap:16px;padding:48px}
+.spinner{width:40px;height:40px;border:3px solid rgba(var(--acc-rgb),.2);border-top-color:var(--acc);border-radius:50%;animation:spin .8s linear infinite}
+.loading-text{font-size:14px;color:var(--muted)}
+.error-box{color:#ff7a7a;font-size:13px;text-align:center;padding:16px;max-width:500px;word-break:break-word}
+
+/* ── WORD EDITOR ── */
+.editor-screen{position:relative;z-index:1;min-height:100vh;display:flex;flex-direction:column;align-items:center;padding:24px 16px 60px;animation:fadeUp .3s ease both}
+.editor-title{font-family:var(--font-head);font-size:clamp(16px,3vw,22px);font-weight:700;text-align:center;margin-bottom:6px;color:var(--acc)}
+.editor-tip{font-size:13px;color:var(--muted);text-align:center;margin-bottom:20px;max-width:520px;line-height:1.5}
+.editor-tip strong{color:#FFD700}
+.editor-word-list{width:100%;max-width:560px;display:flex;flex-direction:column;gap:10px;margin-bottom:20px}
+.editor-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:14px 14px 14px 16px;position:relative}
+.editor-card-num{font-family:var(--font-head);font-size:10px;color:var(--muted);margin-bottom:8px}
+.editor-row{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px}
+.editor-field{display:flex;flex-direction:column;gap:3px}
+.editor-label{font-size:10px;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:.5px}
+.editor-input{background:rgba(255,255,255,.05);border:1px solid var(--border);border-radius:8px;padding:7px 10px;font-family:var(--font-body);font-size:13px;color:var(--text);outline:none;transition:border-color .2s;width:100%}
+.editor-input:focus{border-color:rgba(var(--acc-rgb),.6)}
+.editor-textarea{background:rgba(255,255,255,.05);border:1px solid var(--border);border-radius:8px;padding:7px 10px;font-family:var(--font-body);font-size:13px;color:var(--text);outline:none;transition:border-color .2s;width:100%;resize:vertical;min-height:54px;line-height:1.4}
+.editor-textarea:focus{border-color:rgba(var(--acc-rgb),.6)}
+.editor-del-btn{position:absolute;top:10px;right:10px;background:rgba(255,80,80,.1);border:1px solid rgba(255,80,80,.25);color:#ff7a7a;border-radius:8px;padding:3px 9px;cursor:pointer;font-size:12px;font-weight:700;font-family:var(--font-body);transition:all .2s}
+.editor-del-btn:hover{background:rgba(255,80,80,.22)}
+.editor-add-btn{width:100%;max-width:560px;background:rgba(var(--acc-rgb),.07);border:1px dashed rgba(var(--acc-rgb),.35);border-radius:var(--radius);padding:12px;cursor:pointer;font-family:var(--font-body);font-size:14px;font-weight:700;color:var(--acc);transition:all .2s;margin-bottom:16px}
+.editor-add-btn:hover{background:rgba(var(--acc-rgb),.14)}
+.editor-actions{display:flex;gap:12px;width:100%;max-width:560px}
+.editor-save-btn{flex:1;background:var(--acc);color:#000;font-weight:800;font-size:15px;border:none;border-radius:var(--radius);padding:14px;cursor:pointer;font-family:var(--font-body);transition:all .2s}
+.editor-save-btn:hover{opacity:.88;transform:translateY(-2px)}
+.editor-save-btn:disabled{opacity:.4;cursor:not-allowed;transform:none}
+.editor-cancel-btn{background:var(--surface);border:1px solid var(--border);color:var(--muted);font-size:14px;font-weight:600;border-radius:var(--radius);padding:14px 22px;cursor:pointer;font-family:var(--font-body);transition:all .2s}
+.editor-cancel-btn:hover{background:rgba(255,255,255,.08)}
+.editor-reset-btn{background:rgba(255,80,80,.08);border:1px solid rgba(255,80,80,.25);color:#ff7a7a;font-size:13px;font-weight:600;border-radius:var(--radius);padding:10px 18px;cursor:pointer;font-family:var(--font-body);transition:all .2s;width:100%;max-width:560px;margin-bottom:12px;text-align:center}
+.editor-reset-btn:hover{background:rgba(255,80,80,.16)}
+
+/* GAME MODES */
+.perspective{perspective:1000px;width:100%;max-width:480px;margin-bottom:24px}
+.flip-wrap{position:relative;height:240px;transform-style:preserve-3d;transition:transform .5s cubic-bezier(.4,0,.2,1);cursor:pointer}
+.flip-wrap.flipped{transform:rotateY(180deg)}
+.flip-face{position:absolute;inset:0;backface-visibility:hidden;border-radius:var(--radius);display:flex;flex-direction:column;align-items:center;justify-content:center;padding:28px;text-align:center;border:1px solid rgba(var(--acc-rgb),.3)}
+.flip-front{background:linear-gradient(135deg,rgba(var(--acc-rgb),.15),rgba(var(--acc-rgb),.05))}
+.flip-back{background:rgba(var(--acc-rgb),.1);transform:rotateY(180deg)}
+.fc-word{font-family:var(--font-head);font-size:clamp(20px,5vw,32px);font-weight:700;color:var(--acc);margin-bottom:8px}
+.fc-pos{font-size:12px;color:var(--muted);font-style:italic}
+.fc-hint{font-size:12px;color:var(--muted);margin-top:12px}
+.fc-def{font-size:16px;line-height:1.55;margin-bottom:12px}
+.fc-example{font-size:13px;color:var(--muted);font-style:italic}
+.fc-controls{display:flex;gap:12px;width:100%;max-width:480px}
+.fc-again,.fc-got{flex:1;padding:14px;border-radius:var(--radius);cursor:pointer;font-weight:700;font-family:var(--font-body);font-size:15px;border:none;transition:all .2s}
+.fc-again{background:rgba(255,90,90,.15);color:#ff7a7a;border:1px solid rgba(255,90,90,.3)}
+.fc-again:hover{background:rgba(255,90,90,.25)}
+.fc-got{background:rgba(80,250,123,.12);color:#50fa7b;border:1px solid rgba(80,250,123,.3)}
+.fc-got:hover{background:rgba(80,250,123,.22)}
+.fc-progress{font-size:13px;color:var(--muted);margin-bottom:16px}
+.quiz-question{width:100%;max-width:520px;background:var(--surface);border:1px solid rgba(var(--acc-rgb),.3);border-radius:var(--radius);padding:28px;text-align:center;margin-bottom:20px}
+.quiz-q-label{font-size:11px;color:var(--muted);margin-bottom:8px;text-transform:uppercase;letter-spacing:1px}
+.quiz-q-word{font-family:var(--font-head);font-size:clamp(22px,5vw,34px);font-weight:700;color:var(--acc)}
+.quiz-q-pos{font-size:12px;color:var(--muted);font-style:italic;margin-top:4px}
+.choices{display:flex;flex-direction:column;gap:10px;width:100%;max-width:520px}
+.choice-btn{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:14px 18px;text-align:left;cursor:pointer;font-family:var(--font-body);font-size:14px;color:var(--text);transition:all .2s;line-height:1.4}
+.choice-btn:hover:not(:disabled){border-color:rgba(var(--acc-rgb),.5);background:rgba(var(--acc-rgb),.07)}
+.choice-btn.correct{background:rgba(80,250,123,.15);border-color:#50fa7b;color:#50fa7b}
+.choice-btn.wrong{background:rgba(255,90,90,.12);border-color:#ff5a5a;color:#ff7a7a}
+.choice-btn:disabled{cursor:default}
+.quiz-counter{font-size:13px;color:var(--muted);margin-bottom:16px}
+.match-cols{display:grid;grid-template-columns:1fr 1fr;gap:10px;width:100%;max-width:620px}
+.match-item{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:12px 14px;cursor:pointer;font-size:13px;transition:all .2s;min-height:52px;display:flex;align-items:center;line-height:1.35}
+.match-item.selected{border-color:var(--acc);background:rgba(var(--acc-rgb),.12)}
+.match-item.matched{border-color:#50fa7b;background:rgba(80,250,123,.1);color:#50fa7b;pointer-events:none}
+.match-item.wrong-flash{animation:wrongShake .4s ease;border-color:#ff5a5a}
+.match-word-item{font-weight:700;color:var(--acc)}
+.match-score{font-size:13px;color:var(--muted);margin-bottom:16px}
+.match-instruction{font-size:13px;color:var(--muted);text-align:center;margin-bottom:16px}
+.spell-word-box{background:rgba(var(--acc-rgb),.1);border:1px solid rgba(var(--acc-rgb),.3);border-radius:var(--radius);padding:28px;text-align:center;width:100%;max-width:480px;margin-bottom:20px}
+.spell-def{font-size:15px;line-height:1.55;margin-bottom:10px}
+.spell-input-row{display:flex;gap:10px;width:100%;max-width:480px;margin-bottom:16px}
+.spell-input{flex:1;background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:12px 16px;font-family:var(--font-head);font-size:16px;color:var(--text);outline:none;transition:border-color .2s}
+.spell-input:focus{border-color:rgba(var(--acc-rgb),.6)}
+.spell-submit{background:rgba(var(--acc-rgb),.15);border:1px solid rgba(var(--acc-rgb),.4);border-radius:12px;padding:12px 20px;cursor:pointer;font-weight:700;color:var(--acc);font-family:var(--font-body);font-size:14px;transition:all .2s}
+.spell-submit:hover{background:rgba(var(--acc-rgb),.25)}
+.spell-feedback{font-size:14px;font-weight:600;text-align:center;min-height:20px;margin-bottom:8px}
+.spell-counter{font-size:13px;color:var(--muted)}
+.spell-reveal-btn{background:none;border:none;color:var(--muted);font-size:12px;cursor:pointer;text-decoration:underline;margin-top:8px;font-family:var(--font-body)}
+.result-trophy{font-size:72px;margin-bottom:8px;animation:float 3s ease-in-out infinite}
+.result-title{font-family:var(--font-head);font-size:28px;font-weight:900;color:var(--acc);margin-bottom:8px}
+.result-stars{font-size:36px;letter-spacing:4px;margin-bottom:8px}
+.result-xp{font-family:var(--font-head);font-size:20px;background:linear-gradient(135deg,#FFD700,#FF8C00);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;margin-bottom:24px}
+.result-btns{display:flex;gap:12px}
+.result-btn{padding:12px 24px;border-radius:12px;cursor:pointer;font-weight:700;font-family:var(--font-body);font-size:15px;border:none;transition:all .2s}
+.result-retry{background:rgba(var(--acc-rgb),.12);border:1px solid rgba(var(--acc-rgb),.3);color:var(--acc)}
+.result-continue{background:var(--acc);color:#000;font-weight:800}
+.result-retry:hover{background:rgba(var(--acc-rgb),.22)}
+.result-continue:hover{opacity:.88;transform:translateY(-2px)}
+.store-header{font-family:var(--font-head);font-size:clamp(20px,5vw,34px);font-weight:900;background:linear-gradient(135deg,#FFD700,#FF69B4);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;text-align:center;margin-bottom:4px}
+.store-sub{font-size:13px;color:var(--muted);text-align:center;margin-bottom:20px}
+.rarity-tabs{display:flex;gap:8px;flex-wrap:wrap;justify-content:center;margin-bottom:22px}
+.rarity-tab{padding:7px 18px;border-radius:20px;cursor:pointer;font-size:13px;font-weight:600;border:1px solid var(--border);background:var(--surface);transition:all .2s;font-family:var(--font-body)}
+.store-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(138px,1fr));gap:14px;width:100%;max-width:720px}
+.sticker-card{border-radius:var(--radius);padding:18px 12px 14px;text-align:center;position:relative;border:1px solid;transition:transform .2s,box-shadow .2s}
+.sticker-card:hover{transform:translateY(-5px) scale(1.03)}
+.sticker-card.legendary-card{animation:legendaryPulse 2.5s ease-in-out infinite}
+.sticker-card .owned-tag{position:absolute;top:8px;right:8px;background:#50fa7b;color:#001a06;font-size:9px;font-weight:800;padding:2px 7px;border-radius:10px}
+.sticker-emoji{font-size:40px;display:block;margin-bottom:8px;animation:float 3.5s ease-in-out infinite}
+.sticker-name{font-size:12px;font-weight:700;margin-bottom:4px}
+.sticker-cost{font-family:var(--font-head);font-size:11px;color:#FFD700}
+.sticker-rarity-label{font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:1px;margin-top:3px}
+.buy-btn{margin-top:10px;padding:7px 14px;border-radius:10px;cursor:pointer;font-size:12px;font-weight:800;border:none;transition:all .2s;width:100%;font-family:var(--font-body)}
+.buy-btn:disabled{opacity:.35;cursor:not-allowed}
+.toast{position:fixed;top:22px;left:50%;transform:translateX(-50%);background:#0d2b0d;border:1px solid #50fa7b;color:#50fa7b;padding:10px 26px;border-radius:24px;font-weight:700;font-size:14px;z-index:999;animation:fadeUp .3s ease;pointer-events:none;white-space:nowrap}
+.sbook-header{font-family:var(--font-head);font-size:clamp(18px,4vw,28px);font-weight:900;background:linear-gradient(135deg,#FF69B4,#BD93F9,#4FC3F7);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;text-align:center;margin-bottom:4px}
+.sbook-sub{font-size:13px;color:var(--muted);text-align:center;margin-bottom:18px}
+.sbook-page-nav{display:flex;align-items:center;gap:14px;margin-bottom:14px}
+.page-nav-btn{background:var(--surface);border:1px solid var(--border);color:var(--text);border-radius:10px;padding:7px 18px;cursor:pointer;font-size:16px;font-weight:700;transition:all .2s;font-family:var(--font-body)}
+.page-nav-btn:hover:not(:disabled){background:rgba(255,255,255,.09)}
+.page-nav-btn:disabled{opacity:.3;cursor:not-allowed}
+.page-label{font-size:14px;color:var(--muted);min-width:160px;text-align:center}
+.sbook-canvas{width:100%;max-width:600px;height:390px;border-radius:20px;border:2px solid rgba(255,255,255,.12);position:relative;overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,.5);user-select:none}
+.sbook-dot{position:absolute;border-radius:50%;background:rgba(255,255,255,.06);pointer-events:none}
+.placed-sticker{position:absolute;font-size:44px;cursor:grab;user-select:none;line-height:1;transform:translate(-50%,-50%)}
+.placed-sticker:active{cursor:grabbing}
+.placed-sticker .ps-del{position:absolute;top:-10px;right:-10px;width:20px;height:20px;border-radius:50%;background:#ff5050;border:2px solid #fff;color:#fff;font-size:11px;cursor:pointer;display:none;align-items:center;justify-content:center;font-weight:900;line-height:1;z-index:10}
+.placed-sticker.ps-selected{filter:drop-shadow(0 0 8px #FFD700) drop-shadow(0 0 2px #fff)}
+.placed-sticker.ps-selected .ps-del{display:flex}
+.sbook-tip{font-size:12px;color:var(--muted);text-align:center;margin-top:9px;margin-bottom:18px;min-height:18px}
+.inv-section-label{font-size:14px;font-weight:700;color:var(--muted);margin-bottom:10px;align-self:flex-start;max-width:600px;width:100%}
+.inv-grid{display:flex;flex-wrap:wrap;gap:10px;width:100%;max-width:600px;justify-content:flex-start}
+.inv-chip{width:62px;height:70px;border-radius:13px;border:2px solid var(--border);background:var(--surface);display:flex;flex-direction:column;align-items:center;justify-content:center;cursor:pointer;transition:all .2s;font-size:30px;gap:3px}
+.inv-chip:hover{border-color:rgba(255,215,0,.4);transform:scale(1.08)}
+.inv-chip.inv-sel{border-color:#FFD700;background:rgba(255,215,0,.1);box-shadow:0 0 14px rgba(255,215,0,.35)}
+.inv-chip-count{font-size:10px;color:var(--muted);font-weight:700}
+.empty-inv{font-size:14px;color:var(--muted);text-align:center;padding:28px}
+.final-quiz-btn{
+  display:block;width:calc(100% - 40px);max-width:500px;margin:12px auto 0;
+  padding:14px 20px;background:linear-gradient(135deg,rgba(255,215,0,.13),rgba(255,140,0,.09));
+  border:1.5px solid rgba(255,215,0,.45);border-radius:16px;
+  color:#FFD700;font-family:var(--font-body);font-weight:800;font-size:15px;
+  cursor:pointer;transition:all .2s;text-align:center;line-height:1.4
+}
+.final-quiz-btn:hover{background:linear-gradient(135deg,rgba(255,215,0,.22),rgba(255,140,0,.16));transform:translateY(-2px);box-shadow:0 6px 20px rgba(255,215,0,.2)}
+.book-test-btn{  display:block;width:calc(100% - 40px);max-width:500px;margin:16px auto 6px;
+  padding:16px 20px;background:linear-gradient(135deg,rgba(var(--acc-rgb),.1),rgba(var(--acc-rgb),.05));
+  border:1.5px solid rgba(var(--acc-rgb),.4);border-radius:18px;
+  color:var(--text);font-family:var(--font-body);font-weight:800;font-size:16px;
+  cursor:pointer;transition:all .2s;text-align:center;line-height:1.5
+}
+.book-test-btn:hover{transform:translateY(-2px);border-color:var(--acc);box-shadow:0 6px 24px rgba(var(--acc-rgb),.18)}
+
+/* BOTTOM NAV */
+.bottom-nav{position:fixed;bottom:0;left:0;right:0;background:rgba(4,5,15,.95);backdrop-filter:blur(14px);border-top:1px solid rgba(255,255,255,.08);display:flex;z-index:100;padding-bottom:env(safe-area-inset-bottom,0px)}
+.bnav-btn{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:10px 0 13px;cursor:pointer;border:none;background:none;color:var(--muted);font-family:var(--font-body);font-size:10px;font-weight:700;gap:4px;transition:color .2s;text-transform:uppercase;letter-spacing:.6px}
+.bnav-btn.active{color:#FFD700}
+.bnav-icon{font-size:22px;line-height:1}
+
+/* GAME ZONE */
+.gz-header{font-family:var(--font-head);font-size:clamp(22px,5vw,34px);font-weight:900;background:linear-gradient(135deg,#FF69B4,#FFD700,#00E5FF);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;text-align:center;margin-bottom:4px}
+.gz-sub{font-size:13px;color:var(--muted);text-align:center;margin-bottom:22px}
+.gz-level-label{font-size:12px;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.6px;margin-bottom:10px;text-align:center}
+.gz-level-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(64px,1fr));gap:8px;width:100%;max-width:500px;margin-bottom:26px}
+.gz-level-btn{padding:10px 4px;border-radius:12px;border:1px solid var(--border);background:var(--surface);color:var(--text);font-family:var(--font-body);font-weight:700;font-size:13px;cursor:pointer;transition:all .2s;text-align:center}
+.gz-level-btn.sel{background:rgba(255,215,0,.15);border-color:#FFD700;color:#FFD700;box-shadow:0 0 12px rgba(255,215,0,.2)}
+.gz-games-grid{display:flex;flex-direction:column;gap:12px;width:100%;max-width:500px}
+.gz-game-card{border-radius:20px;padding:18px 20px;cursor:pointer;border:1px solid var(--border);background:var(--surface);display:flex;gap:16px;align-items:center;transition:all .25s;position:relative;overflow:hidden}
+.gz-game-card::before{content:'';position:absolute;inset:0;background:radial-gradient(circle at 0% 50%,rgba(var(--gc-rgb),.1),transparent 70%);pointer-events:none}
+.gz-game-card:hover:not(.disabled){transform:translateY(-3px);border-color:rgba(var(--gc-rgb),.5);box-shadow:0 8px 28px rgba(var(--gc-rgb),.15)}
+.gz-game-card.disabled{opacity:.38;cursor:not-allowed}
+.gz-game-icon{font-size:38px;flex-shrink:0}
+.gz-game-name{font-family:var(--font-head);font-size:14px;font-weight:700;margin-bottom:3px}
+.gz-game-desc{font-size:12px;color:var(--muted);line-height:1.4}
+.gz-game-xp{font-size:11px;color:#FFD700;font-weight:700;margin-top:4px}
+
+/* WORD BLITZ */
+.blitz-bar-wrap{width:100%;max-width:520px;height:7px;background:rgba(255,255,255,.1);border-radius:7px;margin-bottom:18px;overflow:hidden}
+.blitz-bar-fill{height:100%;border-radius:7px;transition:width .1s linear}
+.blitz-big{font-family:var(--font-head);font-size:52px;font-weight:900;color:var(--acc);text-align:center;line-height:1}
+
+/* SCRAMBLE */
+.scram-tiles{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;margin:14px 0 6px;min-height:56px;width:100%;max-width:480px}
+.scram-tile{width:42px;height:48px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-family:var(--font-head);font-size:18px;font-weight:700;cursor:pointer;transition:all .15s;user-select:none;flex-shrink:0}
+.scram-tile.av{background:rgba(var(--acc-rgb),.14);border:1.5px solid rgba(var(--acc-rgb),.4);color:var(--acc)}
+.scram-tile.av:hover{background:rgba(var(--acc-rgb),.25);transform:translateY(-3px)}
+.scram-tile.us{background:rgba(255,255,255,.03);border:1.5px solid rgba(255,255,255,.07);color:rgba(255,255,255,.12);cursor:default}
+.scram-answer{display:flex;flex-wrap:wrap;gap:6px;justify-content:center;min-height:50px;width:100%;max-width:480px;padding:8px 0 10px;border-bottom:2px solid rgba(var(--acc-rgb),.3);margin-bottom:6px}
+.scram-ans-tile{width:38px;height:44px;border-radius:8px;background:rgba(var(--acc-rgb),.1);border:1px solid rgba(var(--acc-rgb),.3);display:flex;align-items:center;justify-content:center;font-family:var(--font-head);font-size:16px;font-weight:700;color:var(--acc);cursor:pointer;transition:all .15s}
+.scram-ans-tile:hover{background:rgba(255,80,80,.1);border-color:rgba(255,80,80,.3)}
+
+/* TRUE OR FALSE */
+.tof-card{width:100%;max-width:480px;min-height:160px;border-radius:22px;padding:26px;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;border:1px solid rgba(var(--acc-rgb),.25);background:var(--surface);margin-bottom:18px;transition:background .25s,border-color .25s}
+.tof-word{font-family:var(--font-head);font-size:clamp(18px,5vw,26px);font-weight:700;color:var(--acc);margin-bottom:10px}
+.tof-def{font-size:14px;line-height:1.55}
+.tof-btns{display:flex;gap:14px;width:100%;max-width:360px}
+.tof-btn{flex:1;padding:15px;border-radius:16px;font-size:20px;font-weight:800;cursor:pointer;transition:all .2s;font-family:var(--font-body)}
+.tof-t{background:rgba(80,250,123,.12);border:1.5px solid rgba(80,250,123,.35);color:#50fa7b}
+.tof-t:hover:not(:disabled){background:rgba(80,250,123,.22)}
+.tof-f{background:rgba(255,80,80,.1);border:1.5px solid rgba(255,80,80,.3);color:#ff7a7a}
+.tof-f:hover:not(:disabled){background:rgba(255,80,80,.2)}
+
+/* SPACE BOMBER */
+@keyframes explodeAnim{0%{transform:translate(-50%,-50%) scale(1);opacity:1}100%{transform:translate(-50%,-50%) scale(2.8);opacity:0}}
+@keyframes floatUpAnim{0%{transform:translateX(-50%) translateY(0);opacity:1}100%{transform:translateX(-50%) translateY(-50px);opacity:0}}
+@keyframes shipWiggle{0%,100%{transform:translateX(-50%) rotate(-4deg)}50%{transform:translateX(-50%) rotate(4deg)}}
+@keyframes bombFly{0%{bottom:2%;opacity:1;transform:translateX(-50%) scale(1)}85%{bottom:44%;opacity:1;transform:translateX(-50%) scale(1.3)}100%{bottom:44%;opacity:0;transform:translateX(-50%) scale(1.6)}}
+@keyframes targetPulse{0%,100%{opacity:.2}50%{opacity:.55}}
+.space-arena{position:relative;width:100%;max-width:500px;height:220px;background:linear-gradient(180deg,#010208 0%,#04050f 100%);border-radius:20px;overflow:hidden;border:1px solid rgba(255,255,255,.12);margin-bottom:8px}
+.ship-el{position:absolute;transform:translateX(-50%);text-align:center;user-select:none;z-index:2;animation:shipWiggle 2s ease-in-out infinite}
+.ship-emoji{font-size:34px;display:block;line-height:1}
+.ship-badge{font-size:10px;font-weight:900;border-radius:6px;padding:1px 6px;margin-top:2px;display:inline-block;font-family:var(--font-head)}
+.boom-el{position:absolute;transform:translate(-50%,-50%);pointer-events:none;animation:explodeAnim .65s ease forwards;font-size:46px;z-index:5}
+.xp-float{position:absolute;transform:translateX(-50%);pointer-events:none;animation:floatUpAnim .9s ease forwards;font-weight:900;font-family:var(--font-head);z-index:6;white-space:nowrap}
+.bomb-fly-el{position:absolute;left:50%;animation:bombFly .38s ease forwards;font-size:26px;z-index:8;pointer-events:none}
+.target-ring{position:absolute;left:50%;top:50%;width:72px;height:72px;border-radius:50%;border:1.5px dashed rgba(255,255,255,.3);transform:translate(-50%,-50%);pointer-events:none;animation:targetPulse 1.8s ease-in-out infinite;z-index:1}
+.shoot-btn{width:100%;max-width:500px;padding:14px;background:linear-gradient(135deg,#FF6600,#FF3300);border:none;border-radius:16px;color:#fff;font-family:var(--font-head);font-size:16px;font-weight:900;cursor:pointer;transition:all .2s;letter-spacing:1px;margin-bottom:8px}
+.shoot-btn:hover:not(:disabled){transform:scale(1.03);box-shadow:0 6px 24px rgba(255,80,0,.45)}
+.shoot-btn:disabled{opacity:.32;cursor:not-allowed;transform:none}
+.bomb-storage{display:flex;align-items:center;gap:5px;width:100%;max-width:500px;margin-bottom:10px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.08);border-radius:12px;padding:7px 14px}
+.bomb-slot{font-size:22px;line-height:1}
+.bomb-slot.empty{opacity:.12;filter:grayscale(1)}
+`;
+
+/* ─────────────────────────────────────────────
+   SHARED UI
+───────────────────────────────────────────── */
+function StarField() {
+  return (
+    <div className="star-field">
+      {STARS_DATA.map(s=>(
+        <div key={s.id} className="star" style={{width:s.size,height:s.size,left:`${s.left}%`,top:`${s.top}%`,"--dur":`${s.dur}s`,"--delay":`${s.delay}s`}}/>
+      ))}
+    </div>
+  );
+}
+function TopBar({onBack,xp}){
+  return(
+    <div className="topbar">
+      {onBack&&<button className="btn-back" onClick={onBack}>← Back</button>}
+      <span className="xp-badge" style={{marginLeft:"auto"}}>⚡ {xp} XP</span>
+    </div>
+  );
+}
+function Loader(){
+  return(
+    <div className="loading-box">
+      <div className="spinner"/>
+      <div className="loading-text">Loading vocabulary… (AI draft — you can edit after)</div>
+    </div>
+  );
+}
+
+/* ─────────────────────────────────────────────
+   HOME
+───────────────────────────────────────────── */
+function HomeScreen({done,xp,customWords,onBook,onStore,onStickerBook,onReset}){
+  const totalDone=Object.keys(done).length;
+  const [confirming,setConfirming]=useState(false);
+  return(
+    <div className="screen">
+      <div style={{textAlign:"center",marginTop:12,marginBottom:16}}>
+        <div className="home-title">🌌 Wordly Wise<br/>Galaxy</div>
+        <div className="home-sub">Master vocabulary across 12 cosmic worlds</div>
+      </div>
+      <div className="stats-row">
+        <div className="stat-pill">⚡ {xp} XP Total</div>
+        <div className="stat-pill">✅ {totalDone} Lessons Done</div>
+        <div className="stat-pill">📚 11 Books</div>
+      </div>
+      <div className="nav-btns">
+        <button className="nav-btn" onClick={onStore}>🏪 Sticker Store</button>
+        <button className="nav-btn" onClick={onStickerBook}>📖 Sticker Book</button>
+      </div>
+      <div className="books-grid">
+        {BOOKS.map(book=>{
+          const lc=LESSON_COUNT(book.id);
+          const d=Object.keys(done).filter(k=>k.startsWith(`${book.id}-`)).length;
+          return(
+            <div key={book.id} className="book-card" style={{"--acc":book.color,"--acc-rgb":book.rgb}} onClick={()=>onBook(book.id)}>
+              <span className="book-icon">{book.icon}</span>
+              <div className="book-name">{book.name}</div>
+              <div className="book-grade">{book.grade}</div>
+              <div className="prog-bar"><div className="prog-fill" style={{width:`${(d/lc)*100}%`}}/></div>
+              <div className="prog-label">{d}/{lc}</div>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Reset Progress */}
+      {!confirming?(
+        <button onClick={()=>setConfirming(true)} style={{
+          display:'block',margin:'18px auto 24px',padding:'8px 20px',
+          background:'transparent',border:'1px solid rgba(255,80,80,.35)',
+          borderRadius:10,color:'rgba(255,120,120,.7)',fontSize:12,cursor:'pointer',
+          fontFamily:'var(--font-body)'
+        }}>🗑 Reset All Progress</button>
+      ):(
+        <div style={{textAlign:'center',margin:'16px 20px 24px',padding:'16px',
+          background:'rgba(255,50,50,.08)',border:'1px solid rgba(255,80,80,.4)',borderRadius:14}}>
+          <div style={{fontSize:14,fontWeight:700,color:'#ff8080',marginBottom:10}}>
+            ⚠️ This will erase ALL XP, stars, stickers, and lesson progress.<br/>
+            <span style={{fontSize:12,fontWeight:400,color:'var(--muted)'}}>Word lists you saved manually are kept.</span>
+          </div>
+          <div style={{display:'flex',gap:10,justifyContent:'center'}}>
+            <button onClick={()=>setConfirming(false)} style={{
+              padding:'8px 18px',background:'var(--surface)',border:'1px solid var(--border)',
+              borderRadius:10,color:'var(--text)',fontSize:13,cursor:'pointer',fontFamily:'var(--font-body)'
+            }}>Cancel</button>
+            <button onClick={onReset} style={{
+              padding:'8px 18px',background:'rgba(255,50,50,.8)',border:'none',
+              borderRadius:10,color:'#fff',fontSize:13,fontWeight:700,cursor:'pointer',fontFamily:'var(--font-body)'
+            }}>Yes, Reset Everything</button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ─────────────────────────────────────────────
+   BOOK SCREEN
+───────────────────────────────────────────── */
+function BookScreen({bookId,done,customWords,xp,onBack,onLesson,onBookTest}){
+  const book=BOOKS[bookId-1];
+  const btKey=`bt-${bookId}`;
+  const btDone=done[btKey];
+  return(
+    <div className="screen" style={{"--acc":book.color,"--acc-rgb":book.rgb}}>
+      <TopBar onBack={onBack} xp={xp}/>
+      <div className="section-title">
+        {book.icon} Book {bookId}: {book.name} {btDone&&'🏆'}
+        <div style={{fontSize:13,fontFamily:"var(--font-body)",color:"var(--muted)",fontWeight:400,marginTop:4}}>{book.grade} · Choose a lesson</div>
+      </div>
+      <div className="lessons-grid">
+        {Array.from({length:LESSON_COUNT(bookId)},(_,i)=>{
+          const key=`${bookId}-${i+1}`;
+          const info=done[key];
+          const fqKey=`fq-${bookId}-${i+1}`;
+          const fqDone=done[fqKey];
+          const hasCustom=!!customWords[key];
+          return(
+            <div key={i} className={`lesson-cell${info?" done":""}${hasCustom?" has-custom":""}`} onClick={()=>onLesson(i+1)}>
+              <span>{i+1}</span>
+              {hasCustom&&<span style={{fontSize:9,color:"#50fa7b"}}>✓</span>}
+              {info&&<span className="lesson-stars">{"⭐".repeat(info.stars)}</span>}
+              {fqDone&&<span style={{fontSize:9,position:'absolute',bottom:3,right:3}}>🏆</span>}
+            </div>
+          );
+        })}
+      </div>
+      <div style={{fontSize:12,color:"var(--muted)",marginTop:12}}>Green outline = word list saved ✓ · 🏆 = Final Quiz done</div>
+
+      {/* Book Final Test */}
+      <button className="book-test-btn" onClick={onBookTest}>
+        📚 Book {bookId} Final Test
+        <div style={{fontSize:12,fontWeight:400,color:'var(--muted)',marginTop:3}}>
+          20 questions from all lessons · up to 1500 XP
+          {btDone&&<span style={{color:'#FFD700',marginLeft:6}}>{'⭐'.repeat(btDone.stars)} done!</span>}
+        </div>
+      </button>
+    </div>
+  );
+}
+
+/* ─────────────────────────────────────────────
+   LESSON SCREEN
+───────────────────────────────────────────── */
+function LessonScreen({bookId,lessonNum,done,customWords,xp,onBack,onMode,onEdit,onFinalQuiz}){
+  const book=BOOKS[bookId-1];
+  const key=`${bookId}-${lessonNum}`;
+  const saved=customWords[key];
+  const [words,setWords]=useState(saved||null);
+  const [err,setErr]=useState(null);
+  const [wordSource,setWordSource]=useState(saved?"custom":null);
+  const isCustom=!!saved;
+
+  useEffect(()=>{
+    if(saved){setWords(saved);setWordSource("custom");return;}
+    let cancelled=false;
+    setWords(null);setErr(null);setWordSource(null);
+
+    const key=`${bookId}-${lessonNum}`;
+    const defsCache=loadDefsCache();
+
+    // Priority 1: cached definitions
+    if(defsCache[key]){
+      setWords(defsCache[key]);
+      setWordSource(WW_WORDS[key]?"book":"ai");
+      return;
+    }
+
+    // Priority 2: hardcoded word names → AI writes definitions
+    const wordNames=WW_WORDS[key];
+    const aiCall = wordNames && wordNames.length>=8
+      ? getDefinitionsFromAI(bookId,lessonNum,wordNames)
+      : fetchWordsFromAI(bookId,lessonNum);
+
+    aiCall
+      .then(w=>{
+        if(!cancelled){
+          setWords(w);
+          setWordSource(wordNames&&wordNames.length>=8?"book":"ai");
+          const cache=loadDefsCache();
+          cache[key]=w;
+          saveDefsCache(cache);
+        }
+      })
+      .catch(e=>{if(!cancelled)setErr(e.message||"Failed to load");});
+    return()=>{cancelled=true;};
+  },[bookId,lessonNum,saved]);
+
+  const MODES=[
+    {id:"flashcard",icon:"🃏",name:"Flash Cards",desc:"Flip & memorize"},
+    {id:"quiz",     icon:"🧠",name:"Quiz",       desc:"4-choice questions"},
+    {id:"match",    icon:"🔗",name:"Match",      desc:"Pair word & meaning"},
+    {id:"spell",    icon:"✏️", name:"Spell It",   desc:"Type the word"},
+  ];
+
+  return(
+    <div className="screen" style={{"--acc":book.color,"--acc-rgb":book.rgb}}>
+      <TopBar onBack={onBack} xp={xp}/>
+      <div className="lesson-header">{book.icon} Book {bookId} · Lesson {lessonNum}</div>
+      <div className="lesson-sub">{done[key]?`Best: ${"⭐".repeat(done[key].stars)} · ${done[key].xp} XP`:"Not attempted yet"}</div>
+      <div className="modes-grid">
+        {MODES.map(m=>(
+          <div key={m.id} className="mode-btn" onClick={()=>words&&onMode(m.id,words)}>
+            <span className="mode-icon">{m.icon}</span>
+            <div className="mode-name">{m.name}</div>
+            <div className="mode-desc">{m.desc}</div>
+          </div>
+        ))}
+      </div>
+
+      {/* Final Quiz button */}
+      {words&&(
+        <button className="final-quiz-btn" onClick={()=>onFinalQuiz(words)}>
+          🏆 Final Quiz — all {words.length} words
+          {done[`fq-${bookId}-${lessonNum}`]&&
+            <span style={{marginLeft:8,fontSize:13}}>
+              {'⭐'.repeat(done[`fq-${bookId}-${lessonNum}`].stars)} already completed!
+            </span>}
+        </button>
+      )}
+
+      {/* Status bar */}
+      <div className="word-status-bar">
+        {wordSource==="custom"
+          ? <span className="custom-badge">✓ Your saved word list</span>
+          : wordSource==="book"
+            ? <span className="custom-badge" style={{background:"rgba(100,200,100,0.15)",borderColor:"rgba(100,200,100,0.3)"}}>📖 Words from your book</span>
+            : wordSource==="ai"
+              ? <span className="ai-badge">🤖 AI draft — may have errors</span>
+              : null}
+        {words&&<button className="edit-words-btn" onClick={()=>onEdit(words)}>✏️ Edit Words</button>}
+      </div>
+
+      {err&&<div className="error-box">⚠️ {err}<br/><button className="edit-words-btn" style={{marginTop:10}} onClick={()=>onEdit(Array.from({length:WORD_COUNT(bookId)},blankWord))}>✏️ Enter Words Manually</button></div>}
+      {!words&&!err&&<Loader/>}
+      {words&&(
+        <div className="word-list">
+          {words.map((w,i)=>(
+            <div key={i} className="word-row">
+              <div className="word-row-word">{w.word}</div>
+              <div style={{flex:1}}>
+                <div className="word-row-pos">{w.pos}</div>
+                <div className="word-row-def">{w.definition}</div>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ─────────────────────────────────────────────
+   WORD EDITOR
+───────────────────────────────────────────── */
+function WordEditor({bookId,lessonNum,initialWords,customWords,onSave,onCancel}){
+  const book=BOOKS[bookId-1];
+  const key=`${bookId}-${lessonNum}`;
+  const hasCustom=!!customWords[key];
+
+  const [rows,setRows]=useState(()=>
+    (initialWords||[]).map(w=>({...w})).concat(
+      Array.from({length:Math.max(0,WORD_COUNT(bookId)-(initialWords||[]).length)},blankWord)
+    )
+  );
+
+  function update(i,field,val){
+    setRows(r=>r.map((row,j)=>j===i?{...row,[field]:val}:row));
+  }
+  function addRow(){setRows(r=>[...r,blankWord()]);}
+  function delRow(i){setRows(r=>r.filter((_,j)=>j!==i));}
+
+  function save(){
+    const valid=rows.filter(r=>r.word.trim());
+    if(!valid.length)return;
+    onSave(valid);
+  }
+
+  function resetToAI(){
+    if(!hasCustom)return;
+    onSave(null); // null = delete custom, reload AI
+  }
+
+  return(
+    <div className="editor-screen" style={{"--acc":book.color,"--acc-rgb":book.rgb}}>
+      <div className="topbar" style={{maxWidth:560}}>
+        <button className="btn-back" onClick={onCancel}>← Cancel</button>
+        <span className="xp-badge" style={{marginLeft:"auto"}}>{book.icon} Book {bookId} · Lesson {lessonNum}</span>
+      </div>
+
+      <div className="editor-title">✏️ Edit Word List</div>
+      <div className="editor-tip">
+        Type the <strong>exact words from your Wordly Wise book</strong>.<br/>
+        Word and definition are required. Part of speech and example are optional but help with studying.<br/>
+        Your saved list loads instantly — no AI needed!
+      </div>
+
+      <div className="editor-word-list">
+        {rows.map((row,i)=>(
+          <div key={i} className="editor-card">
+            <div className="editor-card-num">Word {i+1}</div>
+            <button className="editor-del-btn" onClick={()=>delRow(i)} title="Remove this word">✕</button>
+            <div className="editor-row">
+              <div className="editor-field">
+                <span className="editor-label">Word *</span>
+                <input className="editor-input" value={row.word} onChange={e=>update(i,"word",e.target.value)} placeholder="e.g. abundant"/>
+              </div>
+              <div className="editor-field">
+                <span className="editor-label">Part of Speech</span>
+                <input className="editor-input" value={row.pos} onChange={e=>update(i,"pos",e.target.value)} placeholder="e.g. adjective"/>
+              </div>
+            </div>
+            <div className="editor-field" style={{marginBottom:8}}>
+              <span className="editor-label">Definition *</span>
+              <textarea className="editor-textarea" value={row.definition} onChange={e=>update(i,"definition",e.target.value)} placeholder="e.g. More than enough; plentiful"/>
+            </div>
+            <div className="editor-field">
+              <span className="editor-label">Example Sentence</span>
+              <textarea className="editor-textarea" value={row.example} onChange={e=>update(i,"example",e.target.value)} placeholder="e.g. The garden was abundant with flowers."/>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      <button className="editor-add-btn" onClick={addRow}>+ Add Another Word</button>
+
+      {hasCustom&&(
+        <button className="editor-reset-btn" onClick={resetToAI}>🔄 Delete my saved list and use AI again</button>
+      )}
+
+      <div className="editor-actions">
+        <button className="editor-cancel-btn" onClick={onCancel}>Cancel</button>
+        <button className="editor-save-btn" onClick={save} disabled={!rows.some(r=>r.word.trim())}>
+          💾 Save Word List
+        </button>
+      </div>
+    </div>
+  );
+}
+
+/* ─────────────────────────────────────────────
+   GAME MODES
+───────────────────────────────────────────── */
+function FlashcardMode({bookId,words,xp,onBack,onResult}){
+  const book=BOOKS[bookId-1];
+  const[idx,setIdx]=useState(0);
+  const[flipped,setFlipped]=useState(false);
+  const[known,setKnown]=useState(0);
+  const w=words[idx];
+  function next(ok){
+    const k=ok?known+1:known;
+    if(idx+1>=words.length){onResult("flashcard",k/words.length);}
+    else{if(ok)setKnown(n=>n+1);setIdx(i=>i+1);setFlipped(false);}
+  }
+  return(
+    <div className="screen" style={{"--acc":book.color,"--acc-rgb":book.rgb}}>
+      <TopBar onBack={onBack} xp={xp}/>
+      <div className="fc-progress">{idx+1}/{words.length} · {known} known ✓</div>
+      <div className="perspective" onClick={()=>setFlipped(f=>!f)}>
+        <div className={`flip-wrap${flipped?" flipped":""}`}>
+          <div className="flip-face flip-front">
+            <div className="fc-word">{w.word}</div>
+            <div className="fc-pos">{w.pos}</div>
+            <div className="fc-hint">tap to reveal</div>
+          </div>
+          <div className="flip-face flip-back">
+            <div className="fc-def">{w.definition}</div>
+            {w.example&&<div className="fc-example">"{w.example}"</div>}
+          </div>
+        </div>
+      </div>
+      {flipped&&(
+        <div className="fc-controls">
+          <button className="fc-again" onClick={()=>next(false)}>😓 Again</button>
+          <button className="fc-got" onClick={()=>next(true)}>✅ Got it!</button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function QuizMode({bookId,words,xp,onBack,onResult}){
+  const book=BOOKS[bookId-1];
+  const[idx,setIdx]=useState(0);
+  const[correct,setCorrect]=useState(0);
+  const[chosen,setChosen]=useState(null);
+  const w=words[idx];
+  const censor=(text,word)=>word ? text.replace(new RegExp(word,'gi'),'______') : text;
+  const choices=useMemo(()=>{
+    const others=words.filter((_,i)=>i!==idx);
+    return shuffle([w,...shuffle(others).slice(0,3)]);
+  },[idx,words]);
+  function pick(def){
+    if(chosen!==null)return;setChosen(def);
+    const ok=def===w.definition;
+    setTimeout(()=>{
+      const nc=ok?correct+1:correct;
+      if(idx+1>=words.length){onResult("quiz",nc/words.length);}
+      else{if(ok)setCorrect(c=>c+1);setIdx(i=>i+1);setChosen(null);}
+    },900);
+  }
+  return(
+    <div className="screen" style={{"--acc":book.color,"--acc-rgb":book.rgb}}>
+      <TopBar onBack={onBack} xp={xp}/>
+      <div className="quiz-counter">Question {idx+1}/{words.length} · {correct} correct ✓</div>
+      <div className="quiz-question">
+        <div className="quiz-q-label">What does this word mean?</div>
+        <div className="quiz-q-word">{w.word}</div>
+        <div className="quiz-q-pos">{w.pos}</div>
+      </div>
+      <div className="choices">
+        {choices.map((c,i)=>{
+          let cls="choice-btn";
+          if(chosen!==null){if(c.definition===w.definition)cls+=" correct";else if(c.definition===chosen)cls+=" wrong";}
+          return <button key={i} className={cls} onClick={()=>pick(c.definition)} disabled={chosen!==null}>
+            {censor(c.definition, c.word)}
+          </button>;
+        })}
+      </div>
+    </div>
+  );
+}
+
+function MatchMode({bookId,words,xp,onBack,onResult}){
+  const book=BOOKS[bookId-1];
+  const BATCH=6;
+  const batches=useMemo(()=>{const r=[];for(let i=0;i<words.length;i+=BATCH)r.push(words.slice(i,i+BATCH));return r;},[words]);
+  const[bi,setBi]=useState(0);
+  const[matched,setMatched]=useState([]);
+  const[selW,setSelW]=useState(null);
+  const[flash,setFlash]=useState(null);
+  const[total,setTotal]=useState(0);
+  const batch=batches[bi]||[];
+  const censor=(text,word)=>word ? text.replace(new RegExp(word,'gi'),'______') : text;
+  const defs=useMemo(()=>shuffle(batch.map(w=>({word:w.word,def:w.definition}))),[batch]);
+  function pickW(w){setSelW(w);}
+  function pickD(def){
+    if(!selW)return;
+    const ok=batch.find(w=>w.word===selW)?.definition===def;
+    if(ok){
+      const nm=[...matched,selW];const nt=total+1;
+      setMatched(nm);setTotal(nt);setSelW(null);
+      if(nm.length>=batch.length)setTimeout(()=>{
+        if(bi+1>=batches.length)onResult("match",nt/words.length);
+        else{setBi(b=>b+1);setMatched([]);setSelW(null);}
+      },500);
+    }else{setFlash(selW+def);setTimeout(()=>{setFlash(null);setSelW(null);},500);}
+  }
+  return(
+    <div className="screen" style={{"--acc":book.color,"--acc-rgb":book.rgb}}>
+      <TopBar onBack={onBack} xp={xp}/>
+      <div className="match-score">Set {bi+1}/{batches.length} · {matched.length}/{batch.length} matched</div>
+      <div className="match-instruction">Select a word, then its definition!</div>
+      <div className="match-cols">
+        <div style={{display:"flex",flexDirection:"column",gap:10}}>
+          {batch.map(w=>(
+            <div key={w.word} className={`match-item match-word-item${selW===w.word?" selected":""}${matched.includes(w.word)?" matched":""}${flash?.startsWith(w.word)?" wrong-flash":""}`}
+              onClick={()=>!matched.includes(w.word)&&pickW(w.word)}>{w.word}</div>
+          ))}
+        </div>
+        <div style={{display:"flex",flexDirection:"column",gap:10}}>
+          {defs.map(({word,def},i)=>{
+            const isM=batch.some(w=>w.definition===def&&matched.includes(w.word));
+            return <div key={i} className={`match-item${isM?" matched":""}${flash?.endsWith(def)?" wrong-flash":""}`}
+              onClick={()=>!isM&&selW&&pickD(def)}>{censor(def, word)}</div>;
+          })}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function SpellMode({bookId,words,xp,onBack,onResult}){
+  const book=BOOKS[bookId-1];
+  const[idx,setIdx]=useState(0);
+  const[inp,setInp]=useState("");
+  const[fb,setFb]=useState(null);
+  const[correct,setCorrect]=useState(0);
+  const[rev,setRev]=useState(false);
+  const ref=useRef(null);
+  const w=words[idx];
+  useEffect(()=>{ref.current?.focus();},[idx]);
+  function submit(){
+    if(!inp.trim())return;
+    const ok=inp.trim().toLowerCase()===w.word.toLowerCase();
+    setFb(ok?"correct":"wrong");
+    const nc=ok?correct+1:correct;
+    setTimeout(()=>{
+      if(idx+1>=words.length)onResult("spell",nc/words.length);
+      else{if(ok)setCorrect(c=>c+1);setIdx(i=>i+1);setInp("");setFb(null);setRev(false);}
+    },700);
+  }
+  const hint=`${w.word?.length ?? '?'} letters`;
+  // Hide the word in both definition and example so it can't be read
+  const blank = '______';
+  const regex = new RegExp(w.word, 'gi');
+  const safeDef = w.definition.replace(regex, blank);
+  const safeEx  = w.example?.replace(regex, blank);
+  return(
+    <div className="screen" style={{"--acc":book.color,"--acc-rgb":book.rgb}}>
+      <TopBar onBack={onBack} xp={xp}/>
+      <div className="spell-counter">{idx+1}/{words.length} · {correct} correct ✓</div>
+      <div className="spell-word-box">
+        <div className="spell-def">{safeDef}</div>
+        <div style={{fontSize:12,color:"var(--muted)"}}>
+          {rev?<span style={{color:"var(--acc)",fontWeight:700,fontFamily:"var(--font-head)"}}>{w.word}</span>:hint}
+        </div>
+        {!rev&&<button className="spell-reveal-btn" onClick={()=>setRev(true)}>reveal word</button>}
+      </div>
+      <div className="spell-input-row">
+        <input ref={ref} className="spell-input" placeholder="Type the word…" value={inp}
+          onChange={e=>setInp(e.target.value)} onKeyDown={e=>e.key==="Enter"&&submit()}
+          disabled={fb!==null} spellCheck={false} autoComplete="off"/>
+        <button className="spell-submit" onClick={submit} disabled={fb!==null}>Go →</button>
+      </div>
+      <div className="spell-feedback" style={{color:fb==="correct"?"#50fa7b":fb==="wrong"?"#ff7a7a":"transparent"}}>
+        {fb==="correct"?"🎉 Correct!":fb==="wrong"?`❌ It was: ${w.word}`:"."}</div>
+      <div style={{fontSize:12,color:"var(--muted)"}}>Example: <em>"{safeEx}"</em></div>
+    </div>
+  );
+}
+
+/* ─────────────────────────────────────────────
+   FINAL QUIZ & BOOK FINAL TEST
+───────────────────────────────────────────── */
+function makeQuestions(pool, n) {
+  if (!pool || !pool.length) return [];
+  // Pad pool to at least 4 for distractor variety
+  const padded = pool.length < 4
+    ? [...pool, ...pool, ...pool, ...pool].slice(0, 4)
+    : pool;
+  const s = shuffle([...padded]);
+  return Array.from({length: Math.max(n, 1)}, (_, i) => {
+    const target = s[i % s.length];
+    const type = i < n * 0.4 ? 'def2word' : i < n * 0.72 ? 'word2def' : 'spell';
+    const distractors = shuffle(padded.filter(w => w.word !== target.word)).slice(0, 3);
+    return { type, target, choices: type !== 'spell' ? shuffle([target, ...distractors]) : [] };
+  });
+}
+
+function FinalQuizScreen({words, book, title, totalQ, xpTable, onBack, onDone}) {
+  const [qs]      = useState(() => makeQuestions(words, totalQ));
+  const [qi,  setQi]   = useState(0);
+  const [score,setScore]= useState(0);
+  const [chosen,setChosen]=useState(null);
+  const [typed, setTyped] = useState('');
+  const [fb,   setFb]  = useState(null);   // null | true | false
+  const [fin,  setFin] = useState(false);
+  const inputRef = useRef(null);
+
+  useEffect(()=>{
+    if(!fin && qs[qi]?.type==='spell') setTimeout(()=>inputRef.current?.focus(),60);
+  },[qi,fin]);
+
+  const q = qs[qi];
+
+  if (!q && !fin) return (
+    <div className="screen" style={{"--acc":book?.color,"--acc-rgb":book?.rgb,justifyContent:'center',textAlign:'center',padding:'0 24px'}}>
+      <TopBar onBack={onBack} xp={0}/>
+      <div style={{fontSize:14,color:'var(--muted)',marginTop:40}}>Not enough words loaded yet — go back and study a few lessons first!</div>
+      <button className="btn-back" style={{marginTop:20}} onClick={onBack}>← Back</button>
+    </div>
+  );
+
+  function advance(ok) {
+    if(ok) setScore(s=>s+1);
+    setFb(ok);
+    setTimeout(()=>{
+      if(qi+1 >= qs.length) setFin(true);
+      else { setQi(i=>i+1); setChosen(null); setTyped(''); setFb(null); }
+    }, 1350);
+  }
+
+  function handleMC(val) {
+    if(fb!==null) return;
+    setChosen(val);
+    advance(val === (q.type==='def2word' ? q.target.word : q.target.definition));
+  }
+
+  function handleSpell(e) {
+    e.preventDefault();
+    if(fb!==null || !typed.trim()) return;
+    advance(typed.trim().toLowerCase() === q.target.word.toLowerCase());
+  }
+
+  /* ── Result screen ── */
+  if(fin) {
+    const pct = score / qs.length;
+    const stars = pct>=0.9?3:pct>=0.7?2:1;
+    const earned = xpTable[3-stars];
+    return(
+      <div className="screen" style={{"--acc":book.color,"--acc-rgb":book.rgb,justifyContent:'center',textAlign:'center',padding:'0 24px'}}>
+        <div style={{fontSize:70}}>{pct>=0.9?'🏆':pct>=0.7?'🥈':'🥉'}</div>
+        <div style={{fontFamily:'var(--font-head)',fontSize:19,color:'var(--acc)',marginTop:12}}>{title}</div>
+        <div style={{fontSize:50,fontWeight:800,margin:'14px 0'}}>{score}/{qs.length}</div>
+        <div style={{fontSize:26,marginBottom:12}}>
+          {'⭐'.repeat(stars)}{'☆'.repeat(3-stars)}
+        </div>
+        <div style={{
+          display:'inline-block',background:'rgba(255,215,0,.12)',
+          border:'1px solid rgba(255,215,0,.35)',borderRadius:14,
+          padding:'12px 30px',color:'#FFD700',fontWeight:800,fontSize:19,marginBottom:24
+        }}>+{earned} XP</div>
+        <div style={{display:'flex',gap:12,justifyContent:'center',flexWrap:'wrap'}}>
+          <button className="btn-back" onClick={onBack}>← Back</button>
+          <button onClick={()=>onDone(stars,earned)} style={{
+            background:'var(--acc)',color:'#000',border:'none',borderRadius:14,
+            padding:'12px 28px',fontWeight:800,fontSize:15,cursor:'pointer'
+          }}>Save & Continue ✓</button>
+        </div>
+      </div>
+    );
+  }
+
+  /* ── Question screen ── */
+  const isSpell = q.type==='spell';
+  const correctVal = q.type==='def2word' ? q.target.word : q.target.definition;
+
+  return(
+    <div className="screen" style={{"--acc":book.color,"--acc-rgb":book.rgb}}>
+      <TopBar onBack={onBack} xp={0}/>
+
+      {/* Progress */}
+      <div style={{padding:'0 20px 10px'}}>
+        <div style={{display:'flex',justifyContent:'space-between',fontSize:12,color:'var(--muted)',marginBottom:5}}>
+          <span style={{fontWeight:600,color:'var(--acc)'}}>{title}</span>
+          <span>{qi+1} / {qs.length} · {score} ✓</span>
+        </div>
+        <div style={{height:5,background:'var(--border)',borderRadius:99}}>
+          <div style={{height:'100%',background:'var(--acc)',borderRadius:99,
+            width:`${(qi/qs.length)*100}%`,transition:'width .3s'}}/>
+        </div>
+      </div>
+
+      {/* Question card */}
+      <div style={{
+        margin:'6px 18px 14px',padding:'20px',borderRadius:20,transition:'all .2s',
+        background: fb===true?'rgba(80,250,123,.08)':fb===false?'rgba(255,80,80,.08)':'var(--surface)',
+        border:`1px solid ${fb===true?'rgba(80,250,123,.4)':fb===false?'rgba(255,80,80,.4)':'var(--border)'}`
+      }}>
+        <div style={{fontSize:10,color:'var(--acc)',textTransform:'uppercase',letterSpacing:1.5,fontWeight:700,marginBottom:10}}>
+          {q.type==='def2word'?'🔎 Which word matches this definition?':
+           q.type==='word2def'?'📖 What does this word mean?':
+           '✏️ Type the word for this definition:'}
+        </div>
+        {q.type==='word2def'&&<div style={{fontSize:28,fontWeight:800,color:'var(--acc)',marginBottom:8}}>{q.target.word}</div>}
+        <div style={{fontSize:14,lineHeight:1.6,color:'var(--text)'}}>
+          {q.type!=='word2def'?q.target.definition:null}
+        </div>
+        {fb!==null&&(
+          <div style={{marginTop:10,fontWeight:700,fontSize:14,color:fb?'#50fa7b':'#ff7a7a'}}>
+            {fb?'✓ Correct!':'✗ Answer: '+q.target.word}
+          </div>
+        )}
+      </div>
+
+      {/* Answers */}
+      {isSpell?(
+        <form onSubmit={handleSpell} style={{padding:'0 18px'}}>
+          <input ref={inputRef} className="spell-input" value={typed}
+            onChange={e=>setTyped(e.target.value)} placeholder="Type the word here…"
+            disabled={fb!==null} autoCapitalize="off" spellCheck={false}/>
+          <button type="submit" disabled={!typed.trim()||fb!==null} style={{
+            marginTop:10,width:'100%',padding:'14px',border:'none',borderRadius:14,
+            fontSize:15,fontWeight:800,cursor:'pointer',
+            background: typed.trim()&&fb===null?'var(--acc)':'var(--border)',
+            color: typed.trim()&&fb===null?'#000':'var(--muted)'
+          }}>Submit ↵</button>
+        </form>
+      ):(
+        <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:10,padding:'0 18px'}}>
+          {q.choices.map((c,i)=>{
+            const val = q.type==='def2word'?c.word:c.definition;
+            const isRight = val===correctVal;
+            const isThis = chosen===val;
+            let bg='var(--surface)',bdr='var(--border)',col='var(--text)';
+            if(fb!==null){
+              if(isRight){bg='rgba(80,250,123,.1)';bdr='rgba(80,250,123,.5)';col='#50fa7b';}
+              else if(isThis){bg='rgba(255,80,80,.1)';bdr='rgba(255,80,80,.5)';col='#ff7a7a';}
+            }
+            return(
+              <button key={i} onClick={()=>handleMC(val)} disabled={fb!==null} style={{
+                padding:'12px 10px',background:bg,border:`1px solid ${bdr}`,borderRadius:14,
+                textAlign:'left',fontSize:q.type==='def2word'?16:12,
+                fontWeight:q.type==='def2word'?700:400,
+                color:col,lineHeight:1.4,minHeight:56,cursor:fb!==null?'default':'pointer',
+                display:'flex',alignItems:'center',transition:'all .15s',fontFamily:'var(--font-body)'
+              }}>{val}</button>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ── Book Final Test loader ── */
+function BookTestScreen({bookId,book,customWords,onBack,onDone}) {
+  const [words,setWords]=useState(null);
+  const [loading,setLoading]=useState(true);
+  const [err,setErr]=useState(null);
+  const n = LESSON_COUNT(bookId);
+
+  useEffect(()=>{
+    const cache=loadDefsCache();
+    const cw=customWords||{};
+    const promises=Array.from({length:n},(_,i)=>{
+      const ln=i+1, k=`${bookId}-${ln}`;
+      if(cw[k]) return Promise.resolve(cw[k]);
+      if(cache[k]) return Promise.resolve(cache[k]);
+      const wn=WW_WORDS[k];
+      return wn&&wn.length>=8
+        ? getDefinitionsFromAI(bookId,ln,wn)
+        : fetchWordsFromAI(bookId,ln);
+    });
+    Promise.all(promises)
+      .then(results=>{
+        const nc=loadDefsCache();
+        results.forEach((ws,i)=>{ const k=`${bookId}-${i+1}`; if(!nc[k]) nc[k]=ws; });
+        saveDefsCache(nc);
+        setWords(shuffle(results.flat()));
+        setLoading(false);
+      })
+      .catch(e=>{ setErr(e.message||'Failed'); setLoading(false); });
+  },[]);
+
+  if(loading) return(
+    <div className="screen" style={{"--acc":book.color,"--acc-rgb":book.rgb,justifyContent:'center',textAlign:'center',padding:'0 24px'}}>
+      <div style={{fontSize:60}}>📚</div>
+      <div style={{fontFamily:'var(--font-head)',fontSize:20,color:'var(--acc)',margin:'16px 0 8px'}}>
+        {book.icon} Book {bookId} Final Test
+      </div>
+      <div style={{color:'var(--muted)',marginBottom:24}}>Loading all {n} lessons…</div>
+      <Loader/>
+    </div>
+  );
+  if(err) return(
+    <div className="screen" style={{"--acc":book.color,"--acc-rgb":book.rgb}}>
+      <TopBar onBack={onBack} xp={0}/><div className="error-box">⚠️ {err}</div>
+    </div>
+  );
+  return(
+    <FinalQuizScreen words={words} book={book}
+      title={`${book.icon} Book ${bookId} Final Test`}
+      totalQ={20} xpTable={[1500,900,400]}
+      onBack={onBack} onDone={onDone}/>
+  );
+}
+
+
+function ResultScreen({bookId,pct,xpEarned,stars,onRetry,onContinue}){
+  const book=BOOKS[bookId-1];
+  const msg=pct>=0.9?"Perfect! 🏆":pct>=0.7?"Excellent! 🚀":pct>=0.5?"Good effort! 😊":"Keep going! 💪";
+  return(
+    <div className="screen" style={{justifyContent:"center","--acc":book.color,"--acc-rgb":book.rgb,textAlign:"center"}}>
+      <div className="result-trophy">{stars===3?"🏆":stars===2?"🥈":"🥉"}</div>
+      <div className="result-title">{msg}</div>
+      <div className="result-stars">{"⭐".repeat(stars)}{"☆".repeat(3-stars)}</div>
+      <div style={{fontSize:16,color:"var(--muted)",marginBottom:8}}>Score: {Math.round(pct*100)}%</div>
+      <div className="result-xp">+{xpEarned} XP earned!</div>
+      <div className="result-btns">
+        <button className="result-btn result-retry" onClick={onRetry}>🔄 Retry</button>
+        <button className="result-btn result-continue" onClick={onContinue}>Continue →</button>
+      </div>
+    </div>
+  );
+}
+
+/* ─────────────────────────────────────────────
+   STICKER STORE
+───────────────────────────────────────────── */
+function StickerStore({xp,owned,onBuy,onBack}){
+  const[tab,setTab]=useState("all");
+  const[toast,setToast]=useState(null);
+  const filtered=tab==="all"?STICKERS:STICKERS.filter(s=>s.rarity===tab);
+  function buy(s){
+    if(xp<s.cost)return;
+    onBuy(s);
+    setToast(`${s.emoji} ${s.name} added to your book!`);
+    setTimeout(()=>setToast(null),2000);
+  }
+  return(
+    <div className="screen">
+      {toast&&<div className="toast">{toast}</div>}
+      <TopBar onBack={onBack} xp={xp}/>
+      <div className="store-header">🏪 Sticker Store</div>
+      <div className="store-sub">Spend your XP on cosmic stickers for your Sticker Book!</div>
+      <div className="rarity-tabs">
+        {["all","common","rare","epic","legendary"].map(r=>{
+          const rar=r!=="all"?RARITIES[r]:null;
+          const active=tab===r;
+          return(
+            <button key={r} className="rarity-tab" onClick={()=>setTab(r)} style={{
+              borderColor:active?(rar?.color||"#FFD700"):"var(--border)",
+              color:active?(rar?.color||"#FFD700"):"var(--muted)",
+              background:active?(rar?.bg||"rgba(255,215,0,.08)"):"var(--surface)",
+            }}>{r==="all"?"✨ All":rar.label}</button>
+          );
+        })}
+      </div>
+      <div className="store-grid">
+        {filtered.map(s=>{
+          const rar=RARITIES[s.rarity];
+          const cnt=owned[s.id]||0;
+          const canAfford=xp>=s.cost;
+          return(
+            <div key={s.id} className={`sticker-card${s.rarity==="legendary"?" legendary-card":""}`}
+              style={{background:rar.bg,borderColor:rar.color,boxShadow:`0 4px 20px ${rar.glow}`}}>
+              {cnt>0&&<div className="owned-tag">×{cnt}</div>}
+              <span className="sticker-emoji">{s.emoji}</span>
+              <div className="sticker-name">{s.name}</div>
+              <div className="sticker-rarity-label" style={{color:rar.color}}>{rar.label}</div>
+              <div className="sticker-cost">⚡ {s.cost} XP</div>
+              <button className="buy-btn" disabled={!canAfford} onClick={()=>buy(s)}
+                style={{background:canAfford?rar.color:"rgba(255,255,255,.05)",color:canAfford?"#000":"#555"}}>
+                {canAfford?"Buy!":"Need more XP"}
+              </button>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+/* ─────────────────────────────────────────────
+   STICKER BOOK
+───────────────────────────────────────────── */
+function StickerBook({owned,placed,onPlace,onMove,onDelete,onBack,xp}){
+  const[page,setPage]=useState(0);
+  const[selInv,setSelInv]=useState(null);
+  const[selPlaced,setSelPlaced]=useState(null);
+  const canvasRef=useRef(null);
+  const dragRef=useRef(null);
+  const theme=PAGE_THEMES[page];
+  const invItems=STICKERS.filter(s=>(owned[s.id]||0)>0);
+  const pagePlaced=placed.filter(p=>p.page===page);
+  const dots=useMemo(()=>Array.from({length:22},(_,i)=>({size:3+(i%3),left:(i*13+7)%97,top:(i*17+5)%93})),[]);
+
+  function handleCanvasClick(e){
+    if(dragRef.current?.moved)return;
+    if(!selInv){setSelPlaced(null);return;}
+    if((owned[selInv]||0)<=0){setSelInv(null);return;}
+    const rect=canvasRef.current.getBoundingClientRect();
+    const xPct=((e.clientX-rect.left)/rect.width)*100;
+    const yPct=((e.clientY-rect.top)/rect.height)*100;
+    const s=STICKERS.find(s=>s.id===selInv);
+    if(!s)return;
+    onPlace({uid:newUid(),stickerId:selInv,emoji:s.emoji,page,xPct,yPct});
+    if((owned[selInv]||0)-1<=0)setSelInv(null);
+  }
+  function startDrag(e,pUid){
+    e.stopPropagation();e.preventDefault();
+    setSelPlaced(pUid);setSelInv(null);
+    dragRef.current={uid:pUid,moved:false};
+    const rect=canvasRef.current.getBoundingClientRect();
+    function onMM(me){
+      dragRef.current.moved=true;
+      const xPct=Math.max(2,Math.min(98,((me.clientX-rect.left)/rect.width)*100));
+      const yPct=Math.max(2,Math.min(96,((me.clientY-rect.top)/rect.height)*100));
+      onMove(pUid,xPct,yPct);
+    }
+    function onMU(){window.removeEventListener("mousemove",onMM);window.removeEventListener("mouseup",onMU);}
+    window.addEventListener("mousemove",onMM);window.addEventListener("mouseup",onMU);
+  }
+  const tipText=selInv
+    ?`Click on the page to place ${STICKERS.find(s=>s.id===selInv)?.emoji}!`
+    :selPlaced?"Drag to move · Tap ✕ to delete"
+    :"Pick a sticker below, then click on the page to place it.";
+  return(
+    <div className="screen">
+      <TopBar onBack={onBack} xp={xp}/>
+      <div className="sbook-header">📖 My Sticker Book</div>
+      <div className="sbook-sub">Decorate your pages with the stickers you earned!</div>
+      <div className="sbook-page-nav">
+        <button className="page-nav-btn" onClick={()=>{setPage(p=>p-1);setSelPlaced(null);}} disabled={page===0}>‹</button>
+        <span className="page-label">{theme.label} · Page {page+1}/{PAGE_THEMES.length}</span>
+        <button className="page-nav-btn" onClick={()=>{setPage(p=>p+1);setSelPlaced(null);}} disabled={page===PAGE_THEMES.length-1}>›</button>
+      </div>
+      <div ref={canvasRef} className="sbook-canvas" style={{background:theme.bg,cursor:selInv?"copy":"default"}} onClick={handleCanvasClick}>
+        {dots.map((d,i)=><div key={i} className="sbook-dot" style={{width:d.size,height:d.size,left:`${d.left}%`,top:`${d.top}%`}}/>)}
+        {pagePlaced.map(ps=>(
+          <div key={ps.uid} className={`placed-sticker${selPlaced===ps.uid?" ps-selected":""}`}
+            style={{left:`${ps.xPct}%`,top:`${ps.yPct}%`}}
+            onMouseDown={e=>startDrag(e,ps.uid)} onClick={e=>{e.stopPropagation();setSelPlaced(ps.uid);}}>
+            {ps.emoji}
+            <button className="ps-del" onClick={e=>{e.stopPropagation();onDelete(ps.uid);setSelPlaced(null);}}>✕</button>
+          </div>
+        ))}
+      </div>
+      <div className="sbook-tip">{tipText}</div>
+      {invItems.length===0
+        ?<div className="empty-inv">No stickers yet! 🌟<br/><span style={{fontSize:12}}>Visit the Sticker Store.</span></div>
+        :<>
+          <div className="inv-section-label">Your Stickers</div>
+          <div className="inv-grid">
+            {invItems.map(s=>(
+              <div key={s.id} className={`inv-chip${selInv===s.id?" inv-sel":""}`}
+                onClick={()=>setSelInv(id=>id===s.id?null:s.id)} title={s.name}>
+                <span>{s.emoji}</span>
+                <span className="inv-chip-count">×{owned[s.id]}</span>
+              </div>
+            ))}
+          </div>
+        </>}
+    </div>
+  );
+}
+
+/* ─────────────────────────────────────────────
+   GAME ZONE
+───────────────────────────────────────────── */
+const GAMES_META = [
+  { id:'blitz',    icon:'⚡', name:'Word Blitz',    desc:'Start with 30s. Pick the right answer — each correct adds 3s. Survive as long as you can!', xpDesc:'5 XP per correct',  color:'#FFD700', rgb:'255,215,0' },
+  { id:'scramble', icon:'🔤', name:'Scramble',      desc:'Start with 60s. Tap the tiles to spell the word — each correct adds 5s. Keep going!',       xpDesc:'5 XP per correct',  color:'#FF69B4', rgb:'255,105,180' },
+  { id:'tof',      icon:'💥', name:'True or False', desc:'Start with 30s. Is the definition right or wrong? Each correct adds 3s. How far can you go?', xpDesc:'5 XP per correct',  color:'#00E5FF', rgb:'0,229,255' },
+  { id:'bomber',   icon:'💣', name:'Space Bomber',  desc:'Type the word to earn a bomb, then blast ships flying across the galaxy!',                   xpDesc:'5 or 10 XP per ship', color:'#FF6600', rgb:'255,102,0' },
+];
+
+function useGameWords(bookId) {
+  const [words,    setWords]    = useState(null);
+  const [loading,  setLoading]  = useState(true);
+  const [progress, setProgress] = useState(0);
+
+  useEffect(() => {
+    if (!bookId) return;
+    setWords(null); setLoading(true); setProgress(0);
+
+    const n = LESSON_COUNT(bookId);
+    const cache = loadDefsCache();
+    const collected = {};
+    const toLoad = [];
+
+    for (let i = 1; i <= n; i++) {
+      const k = `${bookId}-${i}`;
+      const v = cache[k];
+      if (v && v.length) collected[k] = v;
+      else toLoad.push(i);
+    }
+
+    const valid = arr => arr.filter(w => w && typeof w.word==='string' && w.word.trim() && w.definition);
+    const getAll = () => shuffle(valid(Object.values(collected).flat()));
+
+    // If we already have enough cached words, start immediately
+    const cachedWords = getAll();
+    if (cachedWords.length >= 20) {
+      setWords(cachedWords);
+      setProgress(n - toLoad.length);
+      setLoading(false);
+    }
+
+    if (!toLoad.length) return; // everything cached, done
+
+    let cancelled = false;
+
+    // Load remaining lessons in background — update words as each arrives
+    toLoad.forEach(ln => {
+      const wn = WW_WORDS[`${bookId}-${ln}`];
+      const call = wn && wn.length >= 8
+        ? getDefinitionsFromAI(bookId, ln, wn)
+        : fetchWordsFromAI(bookId, ln);
+
+      call.then(ws => {
+        if (cancelled) return;
+        if (ws && ws.length) {
+          collected[`${bookId}-${ln}`] = ws;
+          const nc = loadDefsCache();
+          nc[`${bookId}-${ln}`] = ws;
+          saveDefsCache(nc);
+        }
+        setProgress(p => p + 1);
+        // Update word pool live as each lesson arrives
+        const all = getAll();
+        if (all.length) {
+          setWords(all);
+          setLoading(false); // unlock game as soon as we have ANY words
+        }
+      }).catch(() => {
+        if (!cancelled) setProgress(p => p + 1);
+      });
+    });
+
+    return () => { cancelled = true; };
+  }, [bookId]);
+
+  return { words, loading, progress, total: LESSON_COUNT(bookId) };
+}
+
+function pickGameSticker(earned) {
+  if (earned < 20) return null;
+  const rarity = earned >= 60 ? 'rare' : 'common';
+  const pool = STICKERS.filter(s => s.rarity === rarity);
+  return pool.length ? shuffle([...pool])[0] : null;
+}
+
+function GameResult({ icon, title, scoreLabel, stars, earned, onBack, onSave, giveSticker = false }) {
+  const [sticker] = useState(() => giveSticker ? pickGameSticker(earned) : null);
+  const rarityInfo = sticker ? RARITIES[sticker.rarity] : null;
+  return (
+    <div style={{display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',minHeight:'80vh',padding:'0 24px',textAlign:'center',gap:6}}>
+      <div style={{fontSize:68}}>{icon}</div>
+      <div style={{fontFamily:'var(--font-head)',fontSize:17,color:'var(--acc)',marginTop:10}}>{title}</div>
+      <div style={{fontFamily:'var(--font-head)',fontSize:54,fontWeight:900,color:'var(--acc)',lineHeight:1}}>{scoreLabel}</div>
+      <div style={{fontSize:28,letterSpacing:4,margin:'8px 0'}}>{'⭐'.repeat(stars)}{'☆'.repeat(3-stars)}</div>
+      <div style={{background:'rgba(255,215,0,.12)',border:'1px solid rgba(255,215,0,.35)',borderRadius:14,padding:'12px 30px',color:'#FFD700',fontWeight:800,fontSize:20,margin:'6px 0 16px'}}>+{earned} XP</div>
+
+      {/* Free sticker reward */}
+      {sticker ? (
+        <div style={{
+          background: rarityInfo.bg, border:`1.5px solid ${rarityInfo.color}`,
+          borderRadius:18, padding:'14px 24px', marginBottom:16, maxWidth:280,
+          boxShadow:`0 0 20px ${rarityInfo.glow}`
+        }}>
+          <div style={{fontSize:11,color:rarityInfo.color,fontWeight:800,textTransform:'uppercase',
+            letterSpacing:1.5,marginBottom:6}}>🎁 Free Sticker!</div>
+          <div style={{fontSize:52,marginBottom:4}}>{sticker.emoji}</div>
+          <div style={{fontWeight:800,fontSize:15,color:'var(--text)',marginBottom:2}}>{sticker.name}</div>
+          <div style={{fontSize:11,fontWeight:700,color:rarityInfo.color,textTransform:'uppercase',letterSpacing:1}}>
+            {rarityInfo.label}
+          </div>
+        </div>
+      ) : giveSticker && earned < 20 ? (
+        <div style={{fontSize:12,color:'var(--muted)',marginBottom:12}}>
+          Score 20+ XP next time to earn a free sticker!
+        </div>
+      ) : null}
+
+      <div style={{display:'flex',gap:12,justifyContent:'center',flexWrap:'wrap'}}>
+        <button className="btn-back" onClick={onBack}>← Play Again</button>
+        <button onClick={() => onSave(sticker)} style={{background:'var(--acc)',color:'#000',border:'none',borderRadius:14,padding:'12px 28px',fontWeight:800,fontSize:15,cursor:'pointer'}}>
+          {sticker ? 'Save XP + Sticker ✓' : 'Save XP ✓'}
+        </button>
+      </div>
+    </div>
+  );
+}
+
+/* ── shared survival header ── */
+function GameLoader({ book, onBack, xp, progress, total }) {
+  const cached = total - (total - progress); // already done
+  const pct = total > 0 ? Math.round((progress / total) * 100) : 0;
+  return (
+    <div className="screen" style={{"--acc":book?.color,"--acc-rgb":book?.rgb, justifyContent:'center', textAlign:'center', padding:'0 28px'}}>
+      <TopBar onBack={onBack} xp={xp}/>
+      <div style={{fontSize:52, marginBottom:12}}>{book?.icon || '📚'}</div>
+      <div style={{fontFamily:'var(--font-head)', fontSize:16, color:'var(--acc)', marginBottom:6}}>
+        Loading {book?.grade} words…
+      </div>
+      <div style={{fontSize:13, color:'var(--muted)', marginBottom:20}}>
+        Getting your first words ready — just a moment!
+      </div>
+      <div style={{width:'100%', maxWidth:280, height:8, background:'rgba(255,255,255,.1)', borderRadius:8, overflow:'hidden', marginBottom:8}}>
+        <div style={{height:'100%', background:'var(--acc)', borderRadius:8,
+          width:`${pct}%`, transition:'width .4s ease'}}/>
+      </div>
+      <div style={{fontSize:12, color:'var(--muted)'}}>
+        {progress} / {total} lessons ready
+      </div>
+    </div>
+  );
+}
+
+function SurvivalHUD({ timeLeft, score, earned, flash, startTime }) {
+  const pct = Math.min(timeLeft / startTime, 1);
+  const col = pct > 0.4 ? '#50fa7b' : pct > 0.2 ? '#FFD700' : '#FF4444';
+  return (
+    <div style={{width:'100%',maxWidth:500}}>
+      {/* Timer bar */}
+      <div style={{height:8,background:'rgba(255,255,255,.1)',borderRadius:8,overflow:'hidden',marginBottom:8}}>
+        <div style={{height:'100%',borderRadius:8,background:col,
+          width:`${Math.max(0,pct)*100}%`,transition:'background .5s'}}/>
+      </div>
+      <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:14}}>
+        <div style={{fontFamily:'var(--font-head)',fontSize:22,fontWeight:900,color:col,minWidth:70}}>
+          ⏱{timeLeft}s
+        </div>
+        <div style={{fontSize:13,color:'#FFD700',fontWeight:800,minWidth:60,textAlign:'center',
+          opacity:flash?1:0,transition:'opacity .3s',fontFamily:'var(--font-head)'}}>
+          {flash||'+5s ⚡'}
+        </div>
+        <div style={{textAlign:'right'}}>
+          <div style={{fontFamily:'var(--font-head)',fontSize:15,color:'var(--acc)',fontWeight:700}}>⚡ {earned} XP</div>
+          <div style={{fontSize:11,color:'var(--muted)'}}>✓ {score} correct</div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function WordBlitz({ bookId, xp, onBack, onDone }) {
+  const book = BOOKS.find(b => b.id === bookId);
+  const { words, loading, progress, total: totalLessons } = useGameWords(bookId);
+  const START = 30;
+  const [qs, setQs] = useState(null);
+  const [qi, setQi] = useState(0);
+  const [score, setScore] = useState(0);
+  const [earned, setEarned] = useState(0);
+  const [chosen, setChosen] = useState(null);
+  const [timeLeft, setTimeLeft] = useState(START);
+  const [flash, setFlash] = useState(false);
+  const [fin, setFin] = useState(false);
+  const tlRef = useRef(START);
+
+  useEffect(() => { if (words) setQs(makeQuestions(words, 500)); }, [words]);
+
+  useEffect(() => {
+    if (!qs || fin) return;
+    const t = setInterval(() => {
+      tlRef.current -= 1;
+      if (tlRef.current <= 0) { clearInterval(t); tlRef.current = 0; setTimeLeft(0); setFin(true); }
+      else setTimeLeft(tlRef.current);
+    }, 1000);
+    return () => clearInterval(t);
+  }, [qs, fin]);
+
+  function pick(val) {
+    if (chosen || fin) return;
+    const q = qs[qi % qs.length];
+    const right = q.type === 'def2word' ? q.target.word : q.target.definition;
+    const ok = val === right;
+    setChosen(val);
+    if (ok) {
+      setScore(s => s+1); setEarned(e => e+5);
+      tlRef.current += 3; setTimeLeft(t => t+3);
+      setFlash(true); setTimeout(() => setFlash(false), 800);
+    }
+    setTimeout(() => { setChosen(null); setQi(i => i+1); }, 520);
+  }
+
+  if (loading || !words || !qs || !qs.length) return <GameLoader book={book} onBack={onBack} xp={xp} progress={progress} total={totalLessons}/>;
+  if (fin) {
+    const stars = score >= 25 ? 3 : score >= 12 ? 2 : 1;
+    return <div className="screen" style={{"--acc":book?.color,"--acc-rgb":book?.rgb}}><GameResult icon="⚡" title={`Word Blitz — Grade ${bookId}`} scoreLabel={String(score)} stars={stars} earned={earned} onBack={onBack} giveSticker={true} onSave={sticker => onDone(earned, sticker)}/></div>;
+  }
+
+  const q = qs[qi % qs.length];
+  if (!q) return <GameLoader book={book} onBack={onBack} xp={xp} progress={progress} total={totalLessons}/>;
+  const rightVal = q.type === 'def2word' ? q.target.word : q.target.definition;
+  return (
+    <div className="screen" style={{"--acc":book?.color,"--acc-rgb":book?.rgb}}>
+      <TopBar onBack={onBack} xp={xp}/>
+      <SurvivalHUD timeLeft={timeLeft} score={score} earned={earned} flash={flash} startTime={START}/>
+      <div style={{width:'100%',maxWidth:500,background:'var(--surface)',border:'1px solid rgba(var(--acc-rgb),.3)',borderRadius:18,padding:'18px 20px',marginBottom:14,textAlign:'center'}}>
+        <div style={{fontSize:10,color:'var(--acc)',textTransform:'uppercase',letterSpacing:1.5,fontWeight:700,marginBottom:10}}>
+          {q.type==='def2word'?'🔎 Which word matches?':'📖 What does this mean?'}
+        </div>
+        {q.type==='word2def'
+          ? <div style={{fontSize:26,fontWeight:800,color:'var(--acc)'}}>{q.target.word}</div>
+          : <div style={{fontSize:14,lineHeight:1.55}}>{q.target.definition}</div>}
+      </div>
+      <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:10,width:'100%',maxWidth:500}}>
+        {q.choices.map((c,i) => {
+          const val = q.type==='def2word' ? c.word : c.definition;
+          const isRight = val===rightVal, isThis = chosen===val;
+          let bg='var(--surface)',bdr='var(--border)',col='var(--text)';
+          if(chosen){ if(isRight){bg='rgba(80,250,123,.1)';bdr='rgba(80,250,123,.5)';col='#50fa7b';} else if(isThis){bg='rgba(255,80,80,.1)';bdr='rgba(255,80,80,.5)';col='#ff7a7a';} }
+          return <button key={i} onClick={() => pick(val)} disabled={!!chosen} style={{padding:'12px 10px',background:bg,border:`1px solid ${bdr}`,borderRadius:14,textAlign:'left',fontSize:q.type==='def2word'?16:12,fontWeight:q.type==='def2word'?700:400,color:col,lineHeight:1.4,minHeight:54,cursor:chosen?'default':'pointer',fontFamily:'var(--font-body)',transition:'all .15s'}}>{val}</button>;
+        })}
+      </div>
+    </div>
+  );
+}
+
+function ScrambleGame({ bookId, xp, onBack, onDone }) {
+  const book = BOOKS.find(b => b.id === bookId);
+  const { words, loading, progress, total: totalLessons } = useGameWords(bookId);
+  const START = 60;
+  const [pool, setPool] = useState(null);
+  const [curWord, setCurWord] = useState(null);
+  const [avail, setAvail] = useState([]);
+  const [ans, setAns] = useState([]);
+  const [fb, setFb] = useState(null);
+  const [score, setScore] = useState(0);
+  const [earned, setEarned] = useState(0);
+  const [timeLeft, setTimeLeft] = useState(START);
+  const [flash, setFlash] = useState(false);
+  const [fin, setFin] = useState(false);
+  const tlRef = useRef(START);
+  const lastWordRef = useRef(null);
+
+  function pickWord(p) {
+    const eligible = (p||pool).filter(w => w.word && w.word !== lastWordRef.current && w.word.length >= 3 && w.word.length <= 11);
+    const w = shuffle(eligible.length ? eligible : (p||pool))[0];
+    lastWordRef.current = w.word;
+    return w;
+  }
+
+  function loadWord(p) {
+    const w = pickWord(p);
+    setCurWord(w);
+    setAvail(shuffle(w.word.toUpperCase().split('')).map((c,i) => ({char:c,idx:i,used:false})));
+    setAns([]); setFb(null);
+  }
+
+  useEffect(() => {
+    if (words) { const p = words.filter(w => w.word && w.word.length >= 3 && w.word.length <= 11); setPool(p); loadWord(p); }
+  }, [words]);
+
+  useEffect(() => {
+    if (!pool || fin) return;
+    const t = setInterval(() => {
+      tlRef.current -= 1;
+      if (tlRef.current <= 0) { clearInterval(t); tlRef.current = 0; setTimeLeft(0); setFin(true); }
+      else setTimeLeft(tlRef.current);
+    }, 1000);
+    return () => clearInterval(t);
+  }, [pool, fin]);
+
+  function pickA(t) { if (fb) return; setAvail(a => a.map(x => x.idx===t.idx?{...x,used:true}:x)); setAns(a => [...a,t]); }
+  function removeA(t) { if (fb) return; setAns(a => a.filter(x => x.idx!==t.idx)); setAvail(a => a.map(x => x.idx===t.idx?{...x,used:false}:x)); }
+
+  function submit() {
+    if (!curWord || !ans.length || fb || fin) return;
+    const ok = ans.map(t => t.char).join('') === curWord.word.toUpperCase();
+    setFb(ok ? 'correct' : 'wrong');
+    if (ok) {
+      setScore(s => s+1); setEarned(e => e+5);
+      tlRef.current += 5; setTimeLeft(t => t+5);
+      setFlash(true); setTimeout(() => setFlash(false), 800);
+    }
+    setTimeout(() => { if (!fin) loadWord(); }, ok ? 700 : 1100);
+  }
+
+  if (loading || !pool || !curWord) return <GameLoader book={book} onBack={onBack} xp={xp} progress={progress} total={totalLessons}/>;
+  if (fin) {
+    const stars = score >= 12 ? 3 : score >= 6 ? 2 : 1;
+    return <div className="screen" style={{"--acc":book?.color,"--acc-rgb":book?.rgb}}><GameResult icon="🔤" title={`Scramble — Grade ${bookId}`} scoreLabel={String(score)} stars={stars} earned={earned} onBack={onBack} giveSticker={true} onSave={sticker => onDone(earned, sticker)}/></div>;
+  }
+
+  return (
+    <div className="screen" style={{"--acc":book?.color,"--acc-rgb":book?.rgb}}>
+      <TopBar onBack={onBack} xp={xp}/>
+      <SurvivalHUD timeLeft={timeLeft} score={score} earned={earned} flash={flash} startTime={START}/>
+      <div style={{width:'100%',maxWidth:480,background:'rgba(var(--acc-rgb),.08)',border:'1px solid rgba(var(--acc-rgb),.25)',borderRadius:18,padding:'16px 18px',marginBottom:12,textAlign:'center'}}>
+        <div style={{fontSize:10,color:'var(--acc)',textTransform:'uppercase',letterSpacing:1.5,fontWeight:700,marginBottom:8}}>📖 Spell this word</div>
+        <div style={{fontSize:14,lineHeight:1.55}}>{curWord.definition}</div>
+        {curWord.pos && <div style={{fontSize:11,color:'var(--muted)',marginTop:4,fontStyle:'italic'}}>{curWord.pos}</div>}
+      </div>
+      <div className="scram-answer">{ans.map((t,i) => <div key={i} className="scram-ans-tile" onClick={() => removeA(t)}>{t.char}</div>)}</div>
+      <div className="scram-tiles">{avail.map(t => <div key={t.idx} className={`scram-tile ${t.used?'us':'av'}`} onClick={() => !t.used && pickA(t)}>{t.char}</div>)}</div>
+      {fb && <div style={{fontSize:15,fontWeight:700,color:fb==='correct'?'#50fa7b':'#ff7a7a',margin:'8px 0',textAlign:'center'}}>
+        {fb==='correct'?'🎉 +5s!':'❌ It was: '+curWord.word.toUpperCase()}
+      </div>}
+      <div style={{display:'flex',gap:10,marginTop:8,width:'100%',maxWidth:480}}>
+        <button onClick={() => { setAvail(shuffle(curWord.word.toUpperCase().split('')).map((c,i)=>({char:c,idx:i,used:false}))); setAns([]); }} disabled={!!fb}
+          style={{padding:'10px 16px',background:'var(--surface)',border:'1px solid var(--border)',borderRadius:12,color:fb?'var(--muted)':'var(--text)',fontSize:13,cursor:fb?'not-allowed':'pointer',fontFamily:'var(--font-body)',opacity:fb?.4:1}}>🔄</button>
+        <button onClick={submit} disabled={!ans.length||!!fb} style={{flex:1,padding:'12px',background:ans.length&&!fb?'var(--acc)':'var(--border)',border:'none',borderRadius:12,color:ans.length&&!fb?'#000':'var(--muted)',fontWeight:800,fontSize:15,cursor:ans.length&&!fb?'pointer':'default',fontFamily:'var(--font-body)'}}>Check ✓</button>
+      </div>
+    </div>
+  );
+}
+
+function TrueOrFalse({ bookId, xp, onBack, onDone }) {
+  const book = BOOKS.find(b => b.id === bookId);
+  const { words, loading, progress, total: totalLessons } = useGameWords(bookId);
+  const START = 30;
+  const [curQ, setCurQ] = useState(null);
+  const [score, setScore] = useState(0);
+  const [earned, setEarned] = useState(0);
+  const [streak, setStreak] = useState(0);
+  const [fb, setFb] = useState(null);
+  const [timeLeft, setTimeLeft] = useState(START);
+  const [flash, setFlash] = useState(false);
+  const [fin, setFin] = useState(false);
+  const tlRef = useRef(START);
+  const wordsRef = useRef(null);
+
+  function makeQ() {
+    const pool = wordsRef.current;
+    if (!pool || pool.length < 4) return null;
+    const w = shuffle([...pool])[0];
+    const truth = Math.random() > 0.5;
+    const wrongDef = truth ? null : shuffle(pool.filter(x => x.word !== w.word))[0]?.definition;
+    return { word:w.word, definition: truth ? w.definition : (wrongDef||w.definition), correct: truth || !wrongDef };
+  }
+
+  useEffect(() => {
+    if (words && words.length >= 4) { wordsRef.current = words; setCurQ(makeQ()); }
+  }, [words]);
+
+  useEffect(() => {
+    if (!curQ || fin) return;
+    const t = setInterval(() => {
+      tlRef.current -= 1;
+      if (tlRef.current <= 0) { clearInterval(t); tlRef.current = 0; setTimeLeft(0); setFin(true); }
+      else setTimeLeft(tlRef.current);
+    }, 1000);
+    return () => clearInterval(t);
+  }, [curQ, fin]);
+
+  function answer(val) {
+    if (fb || fin || !curQ) return;
+    const ok = val === curQ.correct;
+    setFb(ok ? 'correct' : 'wrong');
+    if (ok) {
+      setScore(s => s+1); setEarned(e => e+5); setStreak(s => s+1);
+      tlRef.current += 3; setTimeLeft(t => t+3);
+      setFlash(true); setTimeout(() => setFlash(false), 800);
+    } else setStreak(0);
+    setTimeout(() => { setFb(null); setCurQ(makeQ()); }, 650);
+  }
+
+  if (loading || !curQ) return <GameLoader book={book} onBack={onBack} xp={xp} progress={progress} total={totalLessons}/>;
+  if (fin) {
+    const stars = score >= 25 ? 3 : score >= 12 ? 2 : 1;
+    return <div className="screen" style={{"--acc":book?.color,"--acc-rgb":book?.rgb}}><GameResult icon="💥" title={`True or False — Grade ${bookId}`} scoreLabel={String(score)} stars={stars} earned={earned} onBack={onBack} giveSticker={true} onSave={sticker => onDone(earned, sticker)}/></div>;
+  }
+
+  return (
+    <div className="screen" style={{"--acc":book?.color,"--acc-rgb":book?.rgb}}>
+      <TopBar onBack={onBack} xp={xp}/>
+      <SurvivalHUD timeLeft={timeLeft} score={score} earned={earned} flash={flash} startTime={START}/>
+      <div style={{fontSize:12,color:'#FFD700',fontWeight:700,textAlign:'center',minHeight:18,marginBottom:8}}>
+        {streak >= 3 ? `🔥 ${streak} streak!` : streak >= 2 ? `⚡ ${streak} in a row!` : ''}
+      </div>
+      <div className="tof-card" style={{
+        background:fb==='correct'?'rgba(80,250,123,.08)':fb==='wrong'?'rgba(255,80,80,.07)':'var(--surface)',
+        borderColor:fb==='correct'?'rgba(80,250,123,.4)':fb==='wrong'?'rgba(255,80,80,.35)':'rgba(var(--acc-rgb),.25)'
+      }}>
+        <div className="tof-word">{curQ.word}</div>
+        <div className="tof-def">{curQ.definition}</div>
+        {fb && <div style={{marginTop:10,fontWeight:700,fontSize:14,color:fb==='correct'?'#50fa7b':'#ff7a7a'}}>
+          {fb==='correct'?'✓ Correct! +5s':'✗ Wrong!'}
+        </div>}
+      </div>
+      <div style={{fontSize:13,color:'var(--muted)',marginBottom:14,textAlign:'center'}}>Is this the correct definition?</div>
+      <div className="tof-btns">
+        <button className="tof-btn tof-t" onClick={() => answer(true)}  disabled={!!fb}>✓ True</button>
+        <button className="tof-btn tof-f" onClick={() => answer(false)} disabled={!!fb}>✗ False</button>
+      </div>
+    </div>
+  );
+}
+
+function SpaceBomber({ bookId, xp: initXp, onBack, onDone }) {
+  const book = BOOKS.find(b => b.id === bookId);
+  const { words, loading, progress, total: totalLessons } = useGameWords(bookId);
+  const START = 120, MAX_BOMBS = 5;
+
+  const [ships,    setShips]    = useState([]);
+  const [booms,    setBooms]    = useState([]);
+  const [xpFloats, setXpFloats] = useState([]);
+  const [timeLeft, setTimeLeft] = useState(START);
+  const [earned,   setEarned]   = useState(0);
+  const [bombCount,setBombCount]= useState(0);
+  const [inp,      setInp]      = useState('');
+  const [curWord,  setCurWord]  = useState(null);
+  const [fb,       setFb]       = useState(null);
+  const [fin,      setFin]      = useState(false);
+  const [shooting, setShooting] = useState(false);
+  const [missFlash,setMissFlash]= useState(false);
+
+  const tlRef    = useRef(START);
+  const wordsRef = useRef(null);
+  const idRef    = useRef(0);
+  const finRef   = useRef(false);
+
+  useEffect(() => {
+    if (words && words.length >= 4) { wordsRef.current = words; pickWord(words); }
+  }, [words]);
+
+  function pickWord(pool) {
+    const p = pool || wordsRef.current; if (!p) return;
+    setCurWord(c => shuffle(p.filter(w => w.word !== c?.word))[0] || p[0]);
+    setFb(null); setInp('');
+  }
+
+  /* countdown */
+  useEffect(() => {
+    if (!curWord || fin) return;
+    const t = setInterval(() => {
+      tlRef.current -= 1;
+      if (tlRef.current <= 0) { clearInterval(t); tlRef.current = 0; setTimeLeft(0); finRef.current = true; setFin(true); }
+      else setTimeLeft(tlRef.current);
+    }, 1000);
+    return () => clearInterval(t);
+  }, [curWord, fin]);
+
+  /* ship position updater 20fps */
+  useEffect(() => {
+    const t = setInterval(() => {
+      if (finRef.current) return;
+      const now = Date.now();
+      setShips(prev => prev
+        .map(s => { const p = Math.min((now - s.born) / 1000 / s.dur, 1); return {...s, x: s.x0+(s.x1-s.x0)*p, gone: p>=1}; })
+        .filter(s => !s.gone)
+      );
+    }, 50);
+    return () => clearInterval(t);
+  }, []);
+
+  /* ship spawner */
+  useEffect(() => {
+    if (!curWord || fin) return;
+    function spawn() {
+      if (finRef.current) return;
+      const rare = Math.random() < 0.25;
+      const right = Math.random() > 0.5;
+      setShips(s => [...s, {
+        id: ++idRef.current,
+        xp: rare ? 10 : 5,
+        x0: right ? -10 : 110, x1: right ? 110 : -10,
+        x:  right ? -10 : 110,
+        y: 8 + Math.random() * 56,
+        dur: 6 + Math.random() * 4,
+        born: Date.now(),
+        emoji: rare ? '🛸' : ['👾','🚀','🛰️'][idRef.current % 3],
+        gone: false,
+      }]);
+    }
+    spawn();
+    const t = setInterval(spawn, 2000 + Math.random() * 1200);
+    return () => clearInterval(t);
+  }, [curWord, fin]);
+
+  function handleChange(e) {
+    const val = e.target.value;
+    setInp(val);
+    if (!curWord || fin) return;
+    if (val.trim().toLowerCase() === curWord.word.toLowerCase()) {
+      setFb('correct');
+      if (bombCount < MAX_BOMBS) setBombCount(b => Math.min(b+1, MAX_BOMBS));
+      tlRef.current += 10; setTimeLeft(t => t+10);
+      setTimeout(() => pickWord(), 500);
+    }
+  }
+
+  function shoot() {
+    if (bombCount <= 0 || fin || shooting) return;
+    setBombCount(b => b - 1);
+    setShooting(true);
+    setTimeout(() => {
+      setShooting(false);
+      setShips(prev => {
+        // hit ship closest to x=50% within ±28% range
+        const zone = prev.filter(s => Math.abs(s.x - 50) < 28);
+        if (!zone.length) { setMissFlash(true); setTimeout(()=>setMissFlash(false),500); return prev; }
+        const hit = zone.reduce((a, b) => Math.abs(a.x-50) < Math.abs(b.x-50) ? a : b);
+        tlRef.current += 2; setTimeLeft(t => t+2);
+        setEarned(e => e + hit.xp);
+        const eid = ++idRef.current;
+        setBooms(b => [...b, {id:eid, x:hit.x, y:hit.y}]);
+        setTimeout(() => setBooms(b => b.filter(x => x.id!==eid)), 700);
+        const fid = ++idRef.current;
+        setXpFloats(f => [...f, {id:fid, x:hit.x, y:hit.y, xp:hit.xp}]);
+        setTimeout(() => setXpFloats(f => f.filter(x => x.id!==fid)), 950);
+        return prev.filter(s => s.id !== hit.id);
+      });
+    }, 380);
+  }
+
+  if (loading || !curWord) return <GameLoader book={book} onBack={onBack} xp={initXp} progress={progress} total={totalLessons}/>;
+  if (fin) {
+    const stars = earned >= 60 ? 3 : earned >= 25 ? 2 : 1;
+    return (
+      <div className="screen" style={{"--acc":book?.color,"--acc-rgb":book?.rgb}}>
+        <GameResult icon="💣" title={`Space Bomber — Grade ${bookId}`}
+          scoreLabel={`${earned} XP`} stars={stars} earned={earned}
+          onBack={onBack} onSave={() => onDone(earned)}/>
+      </div>
+    );
+  }
+
+  const pct = timeLeft / START;
+  const tCol = pct > 0.4 ? '#50fa7b' : pct > 0.2 ? '#FFD700' : '#FF4444';
+  const safeDef = curWord.definition.replace(new RegExp(curWord.word, 'gi'), '______');
+
+  return (
+    <div className="screen" style={{"--acc":book?.color,"--acc-rgb":book?.rgb, paddingBottom:80}}>
+      <TopBar onBack={onBack} xp={initXp}/>
+
+      {/* Timer HUD */}
+      <div style={{width:'100%',maxWidth:500}}>
+        <div style={{height:7,background:'rgba(255,255,255,.1)',borderRadius:7,overflow:'hidden',marginBottom:7}}>
+          <div style={{height:'100%',borderRadius:7,background:tCol,width:`${pct*100}%`,transition:'background .5s'}}/>
+        </div>
+        <div style={{display:'flex',justifyContent:'space-between',marginBottom:8,alignItems:'center'}}>
+          <span style={{fontFamily:'var(--font-head)',fontSize:22,fontWeight:900,color:tCol}}>⏱ {timeLeft}s</span>
+          <span style={{fontFamily:'var(--font-head)',fontSize:15,color:'#FFD700',fontWeight:800}}>⚡ {earned} XP</span>
+        </div>
+      </div>
+
+      {/* Space arena */}
+      <div className="space-arena" style={{borderColor: missFlash ? 'rgba(255,80,80,.6)' : undefined}}>
+        {/* background stars */}
+        {Array.from({length:20},(_,i)=>(
+          <div key={i} style={{position:'absolute',width:i%4===0?3:2,height:i%4===0?3:2,
+            borderRadius:'50%',background:`rgba(255,255,255,${.2+i%3*.12})`,
+            left:`${(i*19+3)%96}%`,top:`${(i*11+8)%88}%`}}/>
+        ))}
+
+        {/* center target ring — this is where the bomb hits */}
+        <div className="target-ring"/>
+        <div style={{position:'absolute',left:'50%',top:'50%',transform:'translate(-50%,-50%)',
+          fontSize:12,color:'rgba(255,255,255,.25)',fontWeight:700,pointerEvents:'none',zIndex:1,
+          marginTop:42,whiteSpace:'nowrap'}}>target</div>
+
+        {/* ships */}
+        {ships.map(s => (
+          <div key={s.id} className="ship-el" style={{left:`${s.x}%`, top:`${s.y}%`}}>
+            <span className="ship-emoji">{s.emoji}</span>
+            <div className="ship-badge" style={{background:s.xp===10?'#FF69B4':'#FFD700',color:'#000'}}>
+              +{s.xp}
+            </div>
+          </div>
+        ))}
+
+        {/* flying bomb */}
+        {shooting && <div className="bomb-fly-el">💣</div>}
+
+        {/* explosions */}
+        {booms.map(b => <div key={b.id} className="boom-el" style={{left:`${b.x}%`,top:`${b.y}%`}}>💥</div>)}
+
+        {/* XP floats */}
+        {xpFloats.map(f => (
+          <div key={f.id} className="xp-float"
+            style={{left:`${f.x}%`,top:`${f.y}%`,fontSize:f.xp===10?16:13,color:f.xp===10?'#FF69B4':'#FFD700'}}>
+            +{f.xp} XP
+          </div>
+        ))}
+
+        {/* miss flash message */}
+        {missFlash && (
+          <div style={{position:'absolute',left:'50%',top:'50%',transform:'translate(-50%,-50%)',
+            fontSize:13,color:'#ff7a7a',fontWeight:800,background:'rgba(0,0,0,.6)',
+            padding:'4px 12px',borderRadius:8,pointerEvents:'none',zIndex:9,whiteSpace:'nowrap'}}>
+            Miss! No ship in target
+          </div>
+        )}
+      </div>
+
+      {/* Shoot button */}
+      <button className="shoot-btn" onClick={shoot} disabled={bombCount===0||shooting}>
+        {shooting ? '💥 Firing…' : bombCount===0 ? '🔫 No Bombs — Spell a word!' : '🔫 SHOOT  →  TARGET'}
+      </button>
+
+      {/* Bomb storage — up to 5 slots */}
+      <div className="bomb-storage">
+        <span style={{fontSize:11,color:'var(--muted)',fontWeight:700,marginRight:4,flexShrink:0}}>STORAGE:</span>
+        {Array.from({length:MAX_BOMBS},(_,i)=>(
+          <span key={i} className={`bomb-slot${i < bombCount?'':' empty'}`}>💣</span>
+        ))}
+        <span style={{fontSize:11,color:'var(--muted)',marginLeft:'auto'}}>{bombCount}/{MAX_BOMBS}</span>
+      </div>
+
+      {/* Word question */}
+      <div style={{width:'100%',maxWidth:500,background:'var(--surface)',
+        border:'1px solid rgba(var(--acc-rgb),.3)',borderRadius:16,padding:'13px 16px',marginBottom:9}}>
+        <div style={{fontSize:10,color:'var(--acc)',textTransform:'uppercase',
+          letterSpacing:1.5,fontWeight:700,marginBottom:7}}>📖 Spell to earn a 💣</div>
+        <div style={{fontSize:14,lineHeight:1.55,marginBottom:8}}>{safeDef}</div>
+        {/* Clues */}
+        <div style={{display:'flex',gap:8,flexWrap:'wrap'}}>
+          <span style={{background:'rgba(255,215,0,.1)',border:'1px solid rgba(255,215,0,.25)',
+            borderRadius:8,padding:'3px 10px',fontSize:12,color:'#FFD700',fontWeight:700}}>
+            Starts with: <span style={{fontFamily:'var(--font-head)'}}>{curWord.word?.[0]?.toUpperCase()}</span>
+          </span>
+          <span style={{background:'rgba(255,215,0,.1)',border:'1px solid rgba(255,215,0,.25)',
+            borderRadius:8,padding:'3px 10px',fontSize:12,color:'#FFD700',fontWeight:700}}>
+            {curWord.word?.length} letters
+          </span>
+          {curWord.pos && (
+            <span style={{background:'rgba(255,255,255,.05)',border:'1px solid rgba(255,255,255,.1)',
+              borderRadius:8,padding:'3px 10px',fontSize:12,color:'var(--muted)',fontStyle:'italic'}}>
+              {curWord.pos}
+            </span>
+          )}
+        </div>
+      </div>
+
+      {/* Input + Skip */}
+      <div style={{display:'flex',gap:8,width:'100%',maxWidth:500}}>
+        <input className="spell-input" value={inp} onChange={handleChange}
+          placeholder="Type the word to earn a 💣…" autoCapitalize="off" spellCheck={false} autoComplete="off"
+          style={{flex:1,
+            borderColor:fb==='correct'?'rgba(80,250,123,.6)':undefined,
+            background:fb==='correct'?'rgba(80,250,123,.05)':undefined}}/>
+        <button type="button" onClick={() => { setFb('skip'); setTimeout(() => pickWord(), 1200); }}
+          style={{padding:'12px 16px',background:'var(--surface)',border:'1px solid var(--border)',
+          borderRadius:12,color:'var(--muted)',fontWeight:700,fontSize:13,cursor:'pointer',
+          fontFamily:'var(--font-body)',whiteSpace:'nowrap'}}>Skip →</button>
+      </div>
+      {fb==='correct' && <div style={{fontSize:13,fontWeight:700,textAlign:'center',marginTop:5,color:'#50fa7b'}}>
+        💣 Bomb added! ({Math.min(bombCount+1,MAX_BOMBS)}/{MAX_BOMBS})
+      </div>}
+      {fb==='skip' && <div style={{fontSize:13,fontWeight:700,textAlign:'center',marginTop:5,color:'#FFD700'}}>
+        The word was: <span style={{fontFamily:'var(--font-head)',fontSize:15}}>{curWord?.word}</span>
+      </div>}
+    </div>
+  );
+}
+
+function GameZoneScreen({ xp, onGame }) {
+  const [sel, setSel] = useState(null);
+  return (
+    <div className="screen" style={{paddingBottom:90}}>
+      <div style={{textAlign:'center',marginTop:12,marginBottom:4}}>
+        <div className="gz-header">🎮 Game Zone</div>
+        <div className="gz-sub">Pick your grade, then pick a game!</div>
+      </div>
+      <div className="gz-level-label">Choose Grade Level:</div>
+      <div className="gz-level-grid">
+        {BOOKS.map(b => (
+          <button key={b.id} className={`gz-level-btn${sel===b.id?' sel':''}`} onClick={() => setSel(b.id)}>
+            {b.grade.replace('Grade ','')}
+          </button>
+        ))}
+      </div>
+      <div className="gz-games-grid">
+        {GAMES_META.map(g => (
+          <div key={g.id} className={`gz-game-card${!sel?' disabled':''}`}
+            style={{'--gc-rgb':g.rgb}} onClick={() => sel && onGame(g.id, sel)}>
+            <div className="gz-game-icon">{g.icon}</div>
+            <div>
+              <div className="gz-game-name" style={{color:g.color}}>{g.name}</div>
+              <div className="gz-game-desc">{g.desc}</div>
+              <div className="gz-game-xp">⚡ {g.xpDesc}</div>
+            </div>
+          </div>
+        ))}
+      </div>
+      {!sel && <div style={{fontSize:13,color:'var(--muted)',marginTop:4}}>👆 Select a grade level first</div>}
+    </div>
+  );
+}
+
+/* ─────────────────────────────────────────────
+   MAIN APP
+───────────────────────────────────────────── */
+function App(){
+  const saved=loadSave();
+  const[tab,setTab]=useState("study");
+  const[screen,setScreen]=useState("home");
+  const[bookId,setBookId]=useState(null);
+  const[lessonNum,setLessonNum]=useState(null);
+  const[activeMode,setActiveMode]=useState(null);
+  const[modeWords,setModeWords]=useState(null);
+  const[finalWords,setFinalWords]=useState(null);
+  const[gameId,setGameId]=useState(null);
+  const[gameBookId,setGameBookId]=useState(null);
+  const[xp,setXp]=useState(saved?.xp??0);
+  const[done,setDone]=useState(saved?.done??{});
+  const[lastPct,setLastPct]=useState(0);
+  const[lastXP,setLastXP]=useState(0);
+  const[lastStars,setLastStars]=useState(1);
+  const[owned,setOwned]=useState(saved?.owned??{});
+  const[placed,setPlaced]=useState(saved?.placed??[]);
+  const[customWords,setCustomWords]=useState(loadCustomWords);
+  const[editingWords,setEditingWords]=useState(null);
+
+  useEffect(()=>{
+    try{localStorage.setItem(SAVE_KEY,JSON.stringify({xp,done,owned,placed}));}catch{}
+  },[xp,done,owned,placed]);
+
+  const goHome=()=>setScreen("home");
+
+  function handleReset(){
+    setXp(0);
+    setDone({});
+    setOwned({});
+    setPlaced([]);
+    try{localStorage.removeItem(SAVE_KEY);}catch{}
+    try{localStorage.removeItem(DEFS_KEY);}catch{}
+    setScreen("home");
+  }
+
+  function handleResult(mode,pct){
+    const stars=calcStars(pct);
+    const earned=calcXP(mode,pct);
+    const key=`${bookId}-${lessonNum}`;
+    const prev=done[key];
+    if(!prev||stars>prev.stars)setDone(d=>({...d,[key]:{stars,xp:earned}}));
+    setXp(x=>x+earned);
+    setLastPct(pct);setLastXP(earned);setLastStars(stars);
+    setScreen("result");
+  }
+
+  function handleFinalQuizDone(stars,earned){
+    const key=`fq-${bookId}-${lessonNum}`;
+    const prev=done[key];
+    if(!prev||stars>prev.stars) setDone(d=>({...d,[key]:{stars,xp:earned}}));
+    setXp(x=>x+earned);
+    setScreen("lesson");
+  }
+
+  function handleBookTestDone(stars,earned){
+    const key=`bt-${bookId}`;
+    const prev=done[key];
+    if(!prev||stars>prev.stars) setDone(d=>({...d,[key]:{stars,xp:earned}}));
+    setXp(x=>x+earned);
+    setScreen("book");
+  }
+
+  function handleGameDone(earned, sticker){
+    setXp(x=>x+earned);
+    if(sticker) setOwned(o=>({...o,[sticker.id]:(o[sticker.id]||0)+1}));
+    setScreen("games");
+  }
+
+  function startGame(gId, bId){
+    setGameId(gId); setGameBookId(bId); setScreen("game");
+  }
+
+  function handleBuy(sticker){
+    setXp(x=>x-sticker.cost);
+    setOwned(o=>({...o,[sticker.id]:(o[sticker.id]||0)+1}));
+  }
+  function handlePlace(ps){
+    setPlaced(p=>[...p,ps]);
+    setOwned(o=>({...o,[ps.stickerId]:Math.max(0,(o[ps.stickerId]||0)-1)}));
+  }
+  function handleMove(uid,xPct,yPct){setPlaced(p=>p.map(s=>s.uid===uid?{...s,xPct,yPct}:s));}
+  function handleDelete(uid){
+    const ps=placed.find(s=>s.uid===uid);
+    setPlaced(p=>p.filter(s=>s.uid!==uid));
+    if(ps)setOwned(o=>({...o,[ps.stickerId]:(o[ps.stickerId]||0)+1}));
+  }
+
+  function handleEditWords(words){
+    setEditingWords(words);
+    setScreen("editor");
+  }
+  function handleSaveWords(words){
+    const key=`${bookId}-${lessonNum}`;
+    let updated;
+    if(words===null){
+      const{[key]:_,...rest}=customWords;
+      updated=rest;
+    } else {
+      updated={...customWords,[key]:words};
+    }
+    setCustomWords(updated);
+    saveCustomWords(updated);
+    setScreen("lesson");
+  }
+
+  const book=bookId?BOOKS.find(b=>b.id===bookId):null;
+  const isGameScreen=screen==="game";
+  const isDeepScreen=["mode","lesson_final","book_test","editor","game"].includes(screen);
+
+  return(
+    <>
+      <style>{css}</style>
+      <div className="app" style={book?{"--acc":book.color,"--acc-rgb":book.rgb}:{}}>
+        <StarField/>
+        {screen==="home"&&<HomeScreen done={done} xp={xp} customWords={customWords} onBook={id=>{setBookId(id);setScreen("book");}} onStore={()=>setScreen("store")} onStickerBook={()=>setScreen("stickerbook")} onReset={handleReset}/>}
+        {screen==="games"&&<GameZoneScreen xp={xp} onGame={startGame}/>}
+        {screen==="book"&&<BookScreen bookId={bookId} done={done} customWords={customWords} xp={xp} onBack={()=>setScreen("home")} onLesson={n=>{setLessonNum(n);setScreen("lesson");}} onBookTest={()=>setScreen("book_test")}/>}
+        {screen==="lesson"&&<LessonScreen bookId={bookId} lessonNum={lessonNum} done={done} customWords={customWords} xp={xp} onBack={()=>setScreen("book")} onMode={(m,w)=>{setActiveMode(m);setModeWords(w);setScreen("mode");}} onEdit={handleEditWords} onFinalQuiz={w=>{setFinalWords(w);setScreen("lesson_final");}}/>}
+        {screen==="editor"&&<WordEditor bookId={bookId} lessonNum={lessonNum} initialWords={editingWords} customWords={customWords} onSave={handleSaveWords} onCancel={()=>setScreen("lesson")}/>}
+        {screen==="mode"&&activeMode==="flashcard"&&<FlashcardMode bookId={bookId} words={modeWords} xp={xp} onBack={()=>setScreen("lesson")} onResult={handleResult}/>}
+        {screen==="mode"&&activeMode==="quiz"     &&<QuizMode      bookId={bookId} words={modeWords} xp={xp} onBack={()=>setScreen("lesson")} onResult={handleResult}/>}
+        {screen==="mode"&&activeMode==="match"    &&<MatchMode     bookId={bookId} words={modeWords} xp={xp} onBack={()=>setScreen("lesson")} onResult={handleResult}/>}
+        {screen==="mode"&&activeMode==="spell"    &&<SpellMode     bookId={bookId} words={modeWords} xp={xp} onBack={()=>setScreen("lesson")} onResult={handleResult}/>}
+        {screen==="lesson_final"&&<FinalQuizScreen words={finalWords} book={book}
+          title={`${book?.icon} Book ${bookId} · Lesson ${lessonNum} Final Quiz`}
+          totalQ={10} xpTable={[500,300,150]}
+          onBack={()=>setScreen("lesson")} onDone={handleFinalQuizDone}/>}
+        {screen==="book_test"&&<BookTestScreen bookId={bookId} book={book} customWords={customWords}
+          onBack={()=>setScreen("book")} onDone={handleBookTestDone}/>}
+        {screen==="result"&&<ResultScreen bookId={bookId} pct={lastPct} xpEarned={lastXP} stars={lastStars} onRetry={()=>setScreen("mode")} onContinue={()=>setScreen("lesson")}/>}
+        {screen==="store"&&<StickerStore xp={xp} owned={owned} onBuy={handleBuy} onBack={()=>setScreen("home")}/>}
+        {screen==="stickerbook"&&<StickerBook owned={owned} placed={placed} onPlace={handlePlace} onMove={handleMove} onDelete={handleDelete} onBack={()=>setScreen("home")} xp={xp}/>}
+        {screen==="game"&&gameId==="blitz"   &&<WordBlitz    bookId={gameBookId} xp={xp} onBack={()=>setScreen("games")} onDone={handleGameDone}/>}
+        {screen==="game"&&gameId==="scramble"&&<ScrambleGame bookId={gameBookId} xp={xp} onBack={()=>setScreen("games")} onDone={handleGameDone}/>}
+        {screen==="game"&&gameId==="tof"     &&<TrueOrFalse  bookId={gameBookId} xp={xp} onBack={()=>setScreen("games")} onDone={handleGameDone}/>}
+        {screen==="game"&&gameId==="bomber"  &&<SpaceBomber  bookId={gameBookId} xp={xp} onBack={()=>setScreen("games")} onDone={handleGameDone}/>}
+
+        {/* Bottom nav — shown on home/games, hidden during deep screens */}
+        {!isDeepScreen&&screen!=="result"&&screen!=="store"&&screen!=="stickerbook"&&screen!=="book"&&screen!=="lesson"&&(
+          <nav className="bottom-nav">
+            <button className={`bnav-btn${tab==="study"?" active":""}`} onClick={()=>{setTab("study");setScreen("home");}}>
+              <span className="bnav-icon">📚</span>Study
+            </button>
+            <button className={`bnav-btn${tab==="games"?" active":""}`} onClick={()=>{setTab("games");setScreen("games");}}>
+              <span className="bnav-icon">🎮</span>Games
+            </button>
+          </nav>
+        )}
+      </div>
+    </>
+  );
+}
+
+
+const root = ReactDOM.createRoot(document.getElementById("root"));
+root.render(<App/>);
+
+  </script>
+</body>
+</html>
